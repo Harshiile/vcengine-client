@@ -3,6 +3,8 @@
 import type React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import logo from '@/public/logo.svg'
+import Image from "next/image"
 
 type FormDataState = {
   name: string
@@ -168,12 +170,7 @@ export default function Signup() {
 
       <header className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <div className="size-9 rounded-md bg-primary flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-semibold">CinemaStudio</span>
-          <span className="text-muted-foreground">•</span>
-          <span className="text-muted-foreground">Versioning</span>
+          <Image src={logo} alt="V'DURA" />
         </div>
 
         <div className="flex items-center gap-4">

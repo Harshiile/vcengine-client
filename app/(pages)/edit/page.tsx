@@ -1,238 +1,338 @@
 "use client"
 
-import { useState } from "react"
-import { VideoPreview } from "./components/video-preview"
-import { Timeline } from "./components/timeline"
-import { ChangesDrawer } from "./components/drawer"
-import { AddDialog } from "./components/dialogs/add"
-import { ReplaceDialog } from "./components/dialogs/replace"
-import { RemoveDialog } from "./components/dialogs/remove"
-import { Button } from "@/components/ui/button"
-import type { ChangeEntry } from "./components/lib/utils"
-import { MainDialog } from "./components/dialogs/main"
+import React, { useEffect, useRef, useState } from "react";
 
-const SAMPLE_VIDEO_URL = "http://localhost:3000/videos/sample.mp4"
+/*
+  Next.js page (TSX) — In-browser fast video cut using @ffmpeg/ffmpeg (FFmpeg.wasm).
+
+  How it works (fast preview):
+  1. User uploads a single MP4/WEBM file.
+  2. We load ffmpeg.wasm in the browser (client-only).
+  3. We compute two segments: [0, start) and (end, duration].
+  4. Use ffmpeg copy mode ("-c copy") to avoid re-encoding (very fast) to extract part1 & part2.
+  5. Use the concat demuxer to join both parts without re-encoding.
+  6. Write the result to a blob URL and show it in a <video> as the real-time output.
+
+  Notes:
+  - This file is a single-file React component (default export). Put it in `pages/video-editor.tsx` (Next.js < 13) or `app/video-editor/page.tsx` (adapt
+    for App Router) and ensure it only runs client-side.
+  - Install required dependency: `npm i @ffmpeg/ffmpeg`
+  - ffmpeg.wasm is relatively large; consider caching or lazy-loading in production.
+  - This code tries to do the trimming with stream copy for speed. Some containers/codecs may still need re-encoding; if you encounter artifacts,
+    change `-c copy` to a re-encode command.
+  - Remotion: for advanced, frame-accurate editing and compositing you can send the output to Remotion for rendering. This example focuses on
+    quick in-browser edits with FFmpeg.wasm.
+*/
 
 export default function VideoEditorPage() {
-  const duration = 120 // seconds
-  const [start, setStart] = useState(10)
-  const [end, setEnd] = useState(40)
-  const [cursor, setCursor] = useState(10)
-  const [changes, setChanges] = useState<ChangeEntry[]>([])
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [ffmpegLoading, setFfmpegLoading] = useState(false);
+  const [ffmpegReady, setFfmpegReady] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [inputFile, setInputFile] = useState<File | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState<string>("10");
+  const [endTime, setEndTime] = useState<string>("30");
+  const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const outVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Dialog states
-  const [openAdd, setOpenAdd] = useState(false)
-  const [openReplace, setOpenReplace] = useState(false)
-  const [openRemove, setOpenRemove] = useState(false)
+  // ffmpeg instance (client only)
+  const ffmpegRef = useRef<any>(null);
 
-  const [showActionDialog, setShowActionDialog] = useState(false)
+  useEffect(() => {
+    // make sure this runs only on client
+    const load = async () => {
+      setFfmpegLoading(true);
+      try {
+        const { createFFmpeg, fetchFile } = await import("@ffmpeg/ffmpeg");
+        const ffmpeg = createFFmpeg({
+          log: true,
+          // progress callback
+          progress: (p: any) => {
+            // p.ratio is 0..1
+            setProgress(Math.round((p.ratio || 0) * 100));
+          },
+        });
+        ffmpegRef.current = { ffmpeg, fetchFile };
+        await ffmpeg.load();
+        setFfmpegReady(true);
+      } catch (e) {
+        console.error("Failed to load ffmpeg.wasm", e);
+      } finally {
+        setFfmpegLoading(false);
+      }
+    };
 
-  // Manual vs auto toggles
-  const [addManual, setAddManual] = useState(false)
-  const [replaceManual, setReplaceManual] = useState(false)
-  const [removeManual, setRemoveManual] = useState(false)
+    load();
+  }, []);
 
-  // Inputs for manual modes
-  const [addSec, setAddSec] = useState(String(cursor | 0))
-  const [addMs, setAddMs] = useState("0")
-  const [replaceStartSec, setReplaceStartSec] = useState(String(start | 0))
-  const [replaceStartMs, setReplaceStartMs] = useState("0")
-  const [replaceEndSec, setReplaceEndSec] = useState(String(end | 0))
-  const [replaceEndMs, setReplaceEndMs] = useState("0")
-  const [removeStartSec, setRemoveStartSec] = useState(String(start | 0))
-  const [removeStartMs, setRemoveStartMs] = useState("0")
-  const [removeEndSec, setRemoveEndSec] = useState(String(end | 0))
-  const [removeEndMs, setRemoveEndMs] = useState("0")
+  const handleFile = (f: File | null) => {
+    setInputFile(f);
+    setOutputUrl(null);
+    setFileName(f ? f.name : null);
+    setDuration(null);
+    if (f && videoRef.current) {
+      const url = URL.createObjectURL(f);
+      videoRef.current.src = url;
+      videoRef.current.onloadedmetadata = () => {
+        setDuration(videoRef.current?.duration || null);
+        // free URL when metadata loaded? keep it for preview
+      };
+    }
+  };
 
-  // File uploads
-  const [addFile, setAddFile] = useState<File | null>(null)
-  const [replaceFile, setReplaceFile] = useState<File | null>(null)
+  const parseTime = (s: string, fallback = 0) => {
+    // Accept seconds or mm:ss or hh:mm:ss
+    if (!s || isNaN(Number(s))) {
+      // try mm:ss
+      const parts = s.split(":").map((p) => Number(p));
+      if (parts.length === 2 && parts.every((n) => !isNaN(n))) {
+        return parts[0] * 60 + parts[1];
+      }
+      if (parts.length === 3 && parts.every((n) => !isNaN(n))) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+      return fallback;
+    }
+    return Number(s);
+  };
 
-  const addChange = (type: "add" | "replace" | "remove", s: number, e: number) => {
-    setChanges((prev) => [...prev, { id: Math.random().toString(36).slice(2), type, start: s, end: e }])
-  }
+  const handleEdit = async () => {
+    if (!ffmpegRef.current) return alert("FFmpeg not ready");
+    if (!inputFile) return alert("Upload a video first");
+    if (!duration) return alert("Video metadata not ready yet. Wait a second and try again.");
 
-  const fromSecMs = (secStr: string, msStr: string) => {
-    const s = Number.parseFloat(secStr || "0")
-    const m = Number.parseFloat(msStr || "0")
-    return Math.max(0, Math.min(s + m / 1000, duration))
-  }
+    const ffmpeg = ffmpegRef.current.ffmpeg;
+    const fetchFile = ffmpegRef.current.fetchFile;
 
-  // Add handlers
-  const submitAddAuto = () => {
-    const s = cursor
-    const e = cursor + 2
-    addChange("add", s, Math.min(e, duration))
-    setOpenAdd(false)
-    setAddManual(false)
-    setAddFile(null)
-  }
+    setBusy(true);
+    setProgress(0);
+    setOutputUrl(null);
 
-  const submitAddManual = () => {
-    const s = fromSecMs(addSec, addMs)
-    const e = s + 2
-    addChange("add", s, Math.min(e, duration))
-    setOpenAdd(false)
-    setAddManual(false)
-    setAddFile(null)
-  }
+    // compute numeric times
+    const start = Math.max(0, parseTime(startTime, 0));
+    const end = Math.min(duration, parseTime(endTime, duration));
 
-  // Replace handlers
-  const submitReplaceAuto = () => {
-    addChange("replace", start, end)
-    setOpenReplace(false)
-    setReplaceManual(false)
-    setReplaceFile(null)
-  }
+    if (start >= end) {
+      alert("Start must be less than end");
+      setBusy(false);
+      return;
+    }
 
-  const submitReplaceManual = () => {
-    const s = fromSecMs(replaceStartSec, replaceStartMs)
-    const e = fromSecMs(replaceEndSec, replaceEndMs)
-    if (e > s) addChange("replace", s, Math.min(e, duration))
-    setOpenReplace(false)
-    setReplaceManual(false)
-    setReplaceFile(null)
-  }
+    try {
+      // write input to ffmpeg FS
+      const inputName = "input.mp4"; // use mp4 for simplicity
+      await ffmpeg.FS("writeFile", inputName, await fetchFile(inputFile));
 
-  // Remove handlers
-  const submitRemoveAuto = () => {
-    addChange("remove", start, end)
-    setOpenRemove(false)
-    setRemoveManual(false)
-  }
+      // extract part1 (0 -> start)
+      const part1 = "part1.mp4";
+      if (start > 0.05) {
+        // Use -ss 0 -to start
+        // Use copy codec for speed
+        await ffmpeg.run(
+          "-i",
+          inputName,
+          "-ss",
+          "0",
+          "-to",
+          String(start),
+          "-c",
+          "copy",
+          part1
+        );
+      } else {
+        // very small start -> create empty small file by copying nothing
+        // skip creating part1; ffmpeg concat requires at least one file so we'll handle cases below
+      }
 
-  const submitRemoveManual = () => {
-    const s = fromSecMs(removeStartSec, removeStartMs)
-    const e = fromSecMs(removeEndSec, removeEndMs)
-    if (e > s) addChange("remove", s, Math.min(e, duration))
-    setOpenRemove(false)
-    setRemoveManual(false)
-  }
+      // extract part2 (end -> duration)
+      const part2 = "part2.mp4";
+      if (end < duration - 0.05) {
+        // -ss END -to DURATION
+        await ffmpeg.run(
+          "-i",
+          inputName,
+          "-ss",
+          String(end),
+          "-to",
+          String(duration),
+          "-c",
+          "copy",
+          part2
+        );
+      }
+
+      // Build concat list depending on which parts exist
+      const filesToConcat: string[] = [];
+      try {
+        ffmpeg.FS("stat", part1);
+        filesToConcat.push(part1);
+      } catch (e) {
+        // part1 doesn't exist
+      }
+      try {
+        ffmpeg.FS("stat", part2);
+        filesToConcat.push(part2);
+      } catch (e) {
+        // part2 doesn't exist
+      }
+
+      if (filesToConcat.length === 0) {
+        // If user removed entire video, produce a 0.5s blank video or just error
+        alert("The selected cut removed the entire video. Nothing to output.");
+        setBusy(false);
+        return;
+      }
+
+      const concatList = "concat-list.txt";
+      const concatContent = filesToConcat.map((f) => `file '${f}'`).join("\n");
+      ffmpeg.FS("writeFile", concatList, new TextEncoder().encode(concatContent));
+
+      const outName = "output.mp4";
+      // concat using demuxer and copy codec
+      await ffmpeg.run("-f", "concat", "-safe", "0", "-i", concatList, "-c", "copy", outName);
+
+      // read result
+      const data = ffmpeg.FS("readFile", outName);
+      const blob = new Blob([data.buffer], { type: "video/mp4" });
+      const url = URL.createObjectURL(blob);
+      setOutputUrl(url);
+
+      // cleanup some FS files to save memory
+      try {
+        ffmpeg.FS("unlink", inputName);
+      } catch (e) { }
+    } catch (err) {
+      console.error("FFmpeg error:", err);
+      alert("An error occurred while editing the video. See console for details.");
+    } finally {
+      setBusy(false);
+      setProgress(0);
+    }
+  };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
-      {/* Header */}
-      <div className="border-b border-border px-6 py-4">
-        <h1 className="text-2xl font-bold">Video Editor</h1>
-        <p className="text-sm text-muted-foreground">Edit your video with precision timeline controls</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow">
+        <h1 className="text-2xl font-semibold mb-4">Fast In-Browser Video Trimmer (FFmpeg.wasm)</h1>
 
-      <div className="flex flex-1 overflow-hidden gap-4 px-6 py-4">
-        {/* Left side - Editor (flex-1 to take available space) */}
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-          {/* Preview Section - fixed height */}
-          <div className="flex-shrink-0">
-            <VideoPreview duration={duration} changes={changes} videoUrl={SAMPLE_VIDEO_URL} />
-          </div>
-
-          {/* Timeline Section - flex-1 to fill remaining space */}
-          <div className="flex-1 overflow-hidden">
-            <Timeline
-              duration={duration}
-              start={start}
-              setStart={setStart}
-              end={end}
-              setEnd={setEnd}
-              cursor={cursor}
-              setCursor={setCursor}
-              changes={changes}
-              onAddClick={() => setOpenAdd(true)}
-              onReplaceClick={() => setOpenReplace(true)}
-              onRemoveClick={() => setOpenRemove(true)}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block mb-2">Upload video (mp4/webm)</label>
+            <input
+              type="file"
+              accept="video/*"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
             />
+
+            <div className="mt-4">
+              <div className="mb-1">Original preview</div>
+              <video
+                controls
+                ref={videoRef}
+                style={{ width: "100%", maxHeight: 360 }}
+              />
+            </div>
+
+            <div className="mt-4">
+              <label className="block">Start timestamp (seconds or mm:ss)</label>
+              <input
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="border p-2 w-full rounded"
+              />
+            </div>
+
+            <div className="mt-2">
+              <label className="block">End timestamp (seconds or mm:ss)</label>
+              <input
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="border p-2 w-full rounded"
+              />
+            </div>
+
+            <div className="mt-4 flex items-center space-x-2">
+              <button
+                onClick={handleEdit}
+                disabled={!ffmpegReady || busy || !inputFile}
+                className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+              >
+                {busy ? "Editing..." : "Edit (remove section)"}
+              </button>
+
+              <button
+                onClick={() => {
+                  // quick set to example using current video
+                  if (videoRef.current && videoRef.current.duration) {
+                    const d = videoRef.current.duration;
+                    setStartTime("0");
+                    setEndTime(String(Math.min(5, Math.floor(d))));
+                  }
+                }}
+                className="px-3 py-2 rounded border"
+              >
+                Sample
+              </button>
+
+              <div className="ml-auto text-sm text-gray-600">
+                FFmpeg: {ffmpegLoading ? "loading..." : ffmpegReady ? "ready" : "failed"}
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <div className="text-sm">Progress: {progress}%</div>
+              <progress value={progress} max={100} className="w-full" />
+            </div>
+
+            <div className="mt-4 text-sm text-gray-600">
+              {duration ? `Original duration: ${Math.round(duration)}s` : "Video metadata not loaded yet."}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2">Output preview</div>
+            <div className="border rounded p-2 min-h-[240px]">
+              {outputUrl ? (
+                <>
+                  <video
+                    controls
+                    src={outputUrl}
+                    ref={outVideoRef}
+                    style={{ width: "100%", maxHeight: 360 }}
+                  />
+
+                  <div className="mt-3 flex space-x-2">
+                    <a href={outputUrl} download={`edited-${fileName ?? "video"}`} className="px-3 py-2 rounded bg-green-600 text-white">
+                      Download
+                    </a>
+                    <button
+                      onClick={() => {
+                        // play in a new tab
+                        window.open(outputUrl!, "_blank");
+                      }}
+                      className="px-3 py-2 rounded border"
+                    >
+                      Open in new tab
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-gray-500">No output yet. After clicking <b>Edit</b> the trimmed/concatenated result will appear here.</div>
+              )}
+            </div>
+
+            <div className="mt-4 text-xs text-gray-500">
+              Tip: The faster (and usually lossless) way is to use <code>-c copy</code> which copies stream data without re-encoding. If you see
+              playback issues you can change the concat step to re-encode (e.g. use <code>-c:v libx264 -c:a aac</code>) but it will be slower.
+            </div>
+
+            <div className="mt-4 text-xs text-gray-400">Built with FFmpeg.wasm. For frame-accurate editing + programmatic timelines consider Remotion integration.</div>
           </div>
         </div>
-
-        {/* Right side - Show Changes button */}
-        <div className="flex-shrink-0 w-32">
-          <Button
-            onClick={() => setDrawerOpen(true)}
-            variant="outline"
-            className="w-full"
-            disabled={changes.length === 0}
-          >
-            Show Changes ({changes.length})
-          </Button>
-        </div>
       </div>
-
-
-      <Button
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        onClick={() => setShowActionDialog(true)}>
-        Make Change
-      </Button>
-
-
-      <MainDialog
-        setOpenAdd={setOpenAdd}
-        setOpenRemove={setOpenRemove}
-        setOpenReplace={setOpenReplace}
-        setShowActionDialog={setShowActionDialog}
-        showActionDialog={showActionDialog}
-      />
-
-
-      {/* Changes Drawer */}
-      <ChangesDrawer open={drawerOpen} onOpenChange={setDrawerOpen} changes={changes} />
-
-      {/* Dialogs */}
-      <AddDialog
-        open={openAdd}
-        onOpenChange={setOpenAdd}
-        addManual={addManual}
-        setAddManual={setAddManual}
-        addSec={addSec}
-        setAddSec={setAddSec}
-        addMs={addMs}
-        setAddMs={setAddMs}
-        addFile={addFile}
-        setAddFile={setAddFile}
-        submitAuto={submitAddAuto}
-        submitManual={submitAddManual}
-        currentCursor={cursor}
-      />
-
-      <ReplaceDialog
-        open={openReplace}
-        onOpenChange={setOpenReplace}
-        replaceManual={replaceManual}
-        setReplaceManual={setReplaceManual}
-        replaceStartSec={replaceStartSec}
-        setReplaceStartSec={setReplaceStartSec}
-        replaceStartMs={replaceStartMs}
-        setReplaceStartMs={setReplaceStartMs}
-        replaceEndSec={replaceEndSec}
-        setReplaceEndSec={setReplaceEndSec}
-        replaceEndMs={replaceEndMs}
-        setReplaceEndMs={setReplaceEndMs}
-        replaceFile={replaceFile}
-        setReplaceFile={setReplaceFile}
-        submitAuto={submitReplaceAuto}
-        submitManual={submitReplaceManual}
-        currentStart={start}
-        currentEnd={end}
-      />
-
-      <RemoveDialog
-        open={openRemove}
-        onOpenChange={setOpenRemove}
-        removeManual={removeManual}
-        setRemoveManual={setRemoveManual}
-        removeStartSec={removeStartSec}
-        setRemoveStartSec={setRemoveStartSec}
-        removeStartMs={removeStartMs}
-        setRemoveStartMs={setRemoveStartMs}
-        removeEndSec={removeEndSec}
-        setRemoveEndSec={setRemoveEndSec}
-        removeEndMs={removeEndMs}
-        setRemoveEndMs={setRemoveEndMs}
-        submitAuto={submitRemoveAuto}
-        submitManual={submitRemoveManual}
-        currentStart={start}
-        currentEnd={end}
-      />
     </div>
-  )
+  );
 }

@@ -16,6 +16,8 @@ import { requestHandler } from "@/lib/requestHandler"
 import { useRouter } from "next/navigation"
 import { useUser } from "@/context/user-context"
 import { applyToast } from "@/lib/toast"
+import logo from '@/public/logo.svg'
+import Image from "next/image"
 
 export function MainNavbar() {
     const router = useRouter()
@@ -32,14 +34,7 @@ export function MainNavbar() {
         <nav className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
             <div className="flex items-center justify-between px-6 py-3">
                 {/* Logo */}
-                <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 group cursor-pointer">
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center group-hover:animate-glow transition-all duration-300">
-                            <div className="w-4 h-4 bg-primary-foreground rounded-sm"></div>
-                        </div>
-                        <span className="font-semibold text-lg group-hover:text-primary transition-colors">V' DURA</span>
-                    </div>
-                </div>
+                <Image src={logo} alt="V'DURA" />
 
                 {/* Search Bar */}
                 <div className="flex-1 max-w-md mx-8">

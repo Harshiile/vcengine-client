@@ -20,6 +20,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import Image from "next/image"
+import logo from '@/public/logo.svg'
 
 export default function Login() {
   const router = useRouter()
@@ -85,12 +87,7 @@ export default function Login() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <div className="size-9 rounded-md bg-primary flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-semibold">CinemaStudio</span>
-          <span className="text-muted-foreground">•</span>
-          <span className="text-muted-foreground">Versioning</span>
+          <Image src={logo} alt="V'DURA" />
         </div>
 
         <div className="flex items-center gap-4">
@@ -297,7 +294,7 @@ export default function Login() {
           </form>
         </DialogContent>
       </Dialog>
-    </main>
+    </main >
   )
 }
 
