@@ -5,6 +5,7 @@ import type { Metadata } from "next"
 // import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "@/app/globals.css"
+import { MainNavbar } from "../../navbar"
 
 export const metadata: Metadata = {
   title: "v0 App",
@@ -18,9 +19,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark antialiased">
-      <body className={`font-sans`}>
-        <Suspense fallback={null}>{children}</Suspense>
+    <html lang="en" className="dark">
+      <body>
+        <MainNavbar />
+        {children}
+        {/*  <Suspense fallback={null}>{children}</Suspense> */}
       </body>
     </html>
   )

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown, Play, Settings } from "lucide-react"
 import VersionsPanel from "./versions-panel"
-import { WorkspaceVersion } from "./workspace-tabs"
+import { WorkspaceVersion } from "./workspace-shell"
 import useSWR from "swr"
 // import { fetcher } from "@/lib/fetcher"
 // import type { WorkspaceVersion } from "@/lib/types"

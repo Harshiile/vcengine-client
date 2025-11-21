@@ -21,7 +21,7 @@ export const requestHandler = async ({
             data: body,
             withCredentials: true
         },)
-        await action(result);
+        return await action(result);
     } catch (err: any) {
         const message =
             err.response?.data?.message || "Something went wrong. Please try again."
