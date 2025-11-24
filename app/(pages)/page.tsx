@@ -1,115 +1,109 @@
-"use client";
+"use client"
 
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
-import { LogIn, UserPlus, Video, Users } from "lucide-react";
+import { ArrowRight, Film, Layers, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HomePage() {
+    const router = useRouter()
+
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-            {/* Header */}
-            <header className="bg-gray-800/80 backdrop-blur-sm border-b border-gray-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center space-x-2">
-                            <Video className="h-8 w-8 text-emerald-400" />
-                            <span className="text-xl font-bold text-white">VC Engine</span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <Link href="/login">
-                                <Button variant="ghost" className="flex items-center space-x-2 text-gray-300 hover:text-white hover:bg-gray-700">
-                                    <LogIn className="h-4 w-4" />
-                                    <span>Sign In</span>
-                                </Button>
-                            </Link>
-                            <Link href="/signup">
-                                <Button className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    <UserPlus className="h-4 w-4" />
-                                    <span>Sign Up</span>
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+        <div className="min-h-screen w-full bg-gradient-to-b from-background to-muted text-foreground flex flex-col items-center overflow-hidden">
 
             {/* Hero Section */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="text-center">
-                    <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-                        Welcome to{" "}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">
-                            VC Engine
-                        </span>
-                    </h1>
-                    <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                        The ultimate platform for video conferencing and collaboration.
-                        Connect, communicate, and collaborate with your team like never before.
+            <section className="w-full px-6 pt-28 pb-16 text-center flex flex-col items-center">
+                <div className="flex items-end">
+                    <Image src="/logo.svg" alt="Logo" className="w-40 h-40 drop-shadow-xl" />
+                    <motion.h1
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8 }}
+                        className="text-5xl md:text-6xl font-bold tracking-tight mb-6"
+                    >
+                        Powerful Cloud Video Editing Platform
+                    </motion.h1>
+                    <Image src="/logo.svg" alt="Logo" className="w-40 h-40 drop-shadow-xl" />
+                </div>
+
+                <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10"
+                >
+                    Edit, trim, replace, and manage video versions with seamless real-time updates.
+                    Designed for creators and teams using VcEngine.
+                </motion.p>
+
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                >
+                    <Button size="lg" className="h-12 px-8 text-lg font-semibold gap-2">
+                        Get Started <ArrowRight className="w-5 h-5" />
+                    </Button>
+                </motion.div>
+            </section>
+
+            {/* Features Section */}
+            <section className="w-full max-w-6xl px-6 py-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <motion.div
+                    whileHover={{ y: -6 }}
+                    transition={{ type: "spring", stiffness: 180 }}
+                    className="p-6 rounded-2xl bg-card shadow-lg border border-border/40"
+                >
+                    <Film className="w-10 h-10 mb-4 text-primary" />
+                    <h3 className="text-xl font-semibold mb-2">Advanced Video Editing</h3>
+                    <p className="text-muted-foreground">
+                        Trim, replace, cut, merge and apply modifications with precision.
                     </p>
+                </motion.div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                        <Link href="/signup">
-                            <Button size="lg" className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white">
-                                Get Started Free
-                            </Button>
-                        </Link>
-                        <Link href="/login">
-                            <Button size="lg" variant="outline" className="w-full sm:w-auto border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white">
-                                Sign In
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
+                <motion.div
+                    whileHover={{ y: -6 }}
+                    transition={{ type: "spring", stiffness: 180 }}
+                    className="p-6 rounded-2xl bg-card shadow-lg border border-border/40"
+                >
+                    <Layers className="w-10 h-10 mb-4 text-primary" />
+                    <h3 className="text-xl font-semibold mb-2">Versioning & Branching</h3>
+                    <p className="text-muted-foreground">
+                        Manage multiple branches, compare changes, and keep your workflow clean.
+                    </p>
+                </motion.div>
 
-                {/* Features Grid */}
-                <div className="grid md:grid-cols-3 gap-8 mt-16">
-                    <Card className="text-center bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                        <CardHeader>
-                            <div className="mx-auto w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                                <Video className="h-6 w-6 text-emerald-400" />
-                            </div>
-                            <CardTitle className="text-white">HD Video Calls</CardTitle>
-                            <CardDescription className="text-gray-300">
-                                Crystal clear video quality for seamless communication
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
+                <motion.div
+                    whileHover={{ y: -6 }}
+                    transition={{ type: "spring", stiffness: 180 }}
+                    className="p-6 rounded-2xl bg-card shadow-lg border border-border/40"
+                >
+                    <Sparkles className="w-10 h-10 mb-4 text-primary" />
+                    <h3 className="text-xl font-semibold mb-2">Automated Cloud Processing</h3>
+                    <p className="text-muted-foreground">
+                        Fast, secure server-side processing for all your uploaded clips.
+                    </p>
+                </motion.div>
+            </section>
 
-                    <Card className="text-center bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                        <CardHeader>
-                            <div className="mx-auto w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                                <Users className="h-6 w-6 text-emerald-400" />
-                            </div>
-                            <CardTitle className="text-white">Team Collaboration</CardTitle>
-                            <CardDescription className="text-gray-300">
-                                Work together with your team in real-time
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-
-                    <Card className="text-center bg-gray-800/50 backdrop-blur-sm border-gray-700">
-                        <CardHeader>
-                            <div className="mx-auto w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                                <UserPlus className="h-6 w-6 text-emerald-400" />
-                            </div>
-                            <CardTitle className="text-white">Easy Setup</CardTitle>
-                            <CardDescription className="text-gray-300">
-                                Get started in minutes with our intuitive interface
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </div>
-            </main>
-
-            {/* Footer */}
-            <footer className="bg-gray-800/80 backdrop-blur-sm border-t border-gray-700 mt-16">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="text-center text-gray-300">
-                        <p>&copy; 2024 VC Engine. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            {/* CTA Footer */}
+            <motion.footer
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="py-20 text-center w-full bg-gradient-to-t from-muted/40 to-transparent"
+            >
+                <h2 className="text-3xl font-bold mb-4">Start Editing with VcEngine</h2>
+                <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+                    Create your first branch, upload video clips, and begin making changes instantly.
+                </p>
+                <Button
+                    onClick={() => router.push("/dashboard")}
+                    size="lg" className="h-12 px-8 text-lg font-semibold">
+                    Open Dashboard
+                </Button>
+            </motion.footer>
         </div>
     );
 }

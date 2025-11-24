@@ -1,6 +1,6 @@
 "use client"
 
-import { Award, MapPin, LinkIcon, Calendar } from "lucide-react"
+import { LinkIcon, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -18,11 +18,6 @@ interface ProfileSidebarProps {
 
 export function ProfileSidebar({ profileData }: ProfileSidebarProps) {
 
-  const handleProfileSave = () => {
-    // console.log("[v0] Profile updated:", updatedProfile)
-  }
-
-
   return (
     <div className="w-full space-y-6 animate-float-up">
       {/* Profile Card */}
@@ -37,7 +32,7 @@ export function ProfileSidebar({ profileData }: ProfileSidebarProps) {
             </Avatar>
 
             <div className="space-y-2">
-              <h2 className="text-xl font-bold text-foreground">{profileData?.username}</h2>
+              <h2 className="text-xl font-bold text-foreground">@{profileData?.username}</h2>
               <p className="text-muted-foreground">{profileData?.email}</p>
             </div>
 

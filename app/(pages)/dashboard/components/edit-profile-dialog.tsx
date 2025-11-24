@@ -61,7 +61,7 @@ export function EditProfileDialog({ children, initialData }: EditProfileDialogPr
         <DialogHeader>
           <DialogTitle className="text-foreground">Edit Profile</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Make changes to your profile here. Click save when you're done.
+            Make changes to your profile here. Click save when you are done.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,9 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Search, Bell, LogOut, Star, FolderOpen, BarChart3 } from "lucide-react"
+import { useEffect } from "react"
+import { LogOut, Star, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
@@ -14,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { requestHandler } from "@/lib/requestHandler"
 import { useRouter } from "next/navigation"
-import { useUser } from "@/context/user-context"
+import { User, useUser } from "@/context/user-context"
 import { applyToast } from "@/lib/toast"
 import logo from '@/public/logo.svg'
 import Image from "next/image"
@@ -22,22 +21,31 @@ import Image from "next/image"
 export function MainNavbar() {
     const router = useRouter()
     const { user, setUser } = useUser()
-    const [searchFocused, setSearchFocused] = useState(false)
     useEffect(() => {
         requestHandler({
             url: '/auth/me',
             method: "GET",
-            action: ({ user }: any) => { console.log(user); setUser(user) }
+            action: ({ user }: { user: User }) => { console.log(user); setUser(user) }
         })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
     return (
         <nav className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
             <div className="flex items-center justify-between px-6 py-3">
+
                 {/* Logo */}
                 <Image src={logo} alt="V'DURA" />
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-4">
+
+                    {/* Name */}
+                    <span className="font-semibold text-md text-foreground">
+                        {user?.name?.charAt(0)?.toUpperCase()}
+                        {user?.name?.slice(1)}
+                    </span>
+
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button

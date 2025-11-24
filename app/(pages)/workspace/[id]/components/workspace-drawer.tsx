@@ -5,6 +5,7 @@ import { X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { requestHandler } from "@/lib/requestHandler"
+import Image from "next/image"
 
 interface Workspace {
     id: string
@@ -35,7 +36,7 @@ export function WorkspaceDrawer({
             requestHandler({
                 url: `/workspaces/users/${userId}`,
                 method: "GET",
-                action: ({ workspaces }: any) => {
+                action: ({ workspaces }: { workspaces: Workspace[] }) => {
                     setWorkspaces(workspaces)
                     setLoading(false)
                 },
@@ -105,7 +106,7 @@ export function WorkspaceDrawer({
                                             {/* Banner */}
                                             <div className="relative w-full aspect-video bg-card/60">
                                                 {workspace.banner ? (
-                                                    <img
+                                                    <Image
                                                         src={`http://localhost:1234/api/v1/storage/images/banner/${workspace.banner}`}
                                                         alt={workspace.name}
                                                         className="w-full h-full object-cover"

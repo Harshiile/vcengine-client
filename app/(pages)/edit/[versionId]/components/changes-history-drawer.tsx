@@ -1,15 +1,13 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import type { ChangeRecord } from "../page"
-import { requestHandler } from "@/lib/requestHandler"
-import axios from "axios"
+import Image from "next/image"
 
 interface ChangesHistoryDrawerProps {
-  oldVersionId: string,
   isOpen: boolean
   onClose: () => void
   changes: ChangeRecord[]
@@ -20,7 +18,6 @@ interface ChangesHistoryDrawerProps {
 }
 
 export default function ChangesHistoryDrawer({
-  oldVersionId,
   isOpen,
   onClose,
   changes,
@@ -35,7 +32,6 @@ export default function ChangesHistoryDrawer({
   const [editFile, setEditFile] = useState<File | null>(null)
   const [expandedVideo, setExpandedVideo] = useState<number | null>(null)
   const [videoThumbnails, setVideoThumbnails] = useState<Record<number, string>>({})
-  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({})
 
   const handleSaveEdit = (id: number) => {
     const change = changes.find((c) => c.id === id)
@@ -58,62 +54,6 @@ export default function ChangesHistoryDrawer({
     onUpdateChange(id, updates)
     setEditingId(null)
     setEditFile(null)
-  }
-
-  const generateJSON = async () => {
-    // 1. Uploads all video clips
-
-    for (const c of changes) {
-      if (c.type != "remove") {
-        await requestHandler({
-          url: "/storage/signed-url",
-          method: "POST",
-          body: {
-            contentType: c.videoBFile?.type,
-            type: "clip",
-          },
-          action: async ({ uploadUrl, fileKey }: any) => {
-            await axios.put(uploadUrl, c.videoBFile, {
-              headers: { "Content-Type": c.videoBFile?.type },
-              onUploadProgress: (evt) => {
-                if (!evt.total) return
-                const percent = Math.round((evt.loaded / evt.total) * 100)
-                console.log(fileKey, ":", percent);
-              },
-            }).catch(() => {
-              throw new Error()
-            })
-            c.newSection = fileKey
-          }
-        })
-      }
-    }
-
-    const bodyChanges = changes.map(c => {
-      return {
-        type: c.type.toUpperCase(),
-        startTimestamp: c.startTimestamp,
-        endTimestamp: c.endTimestamp,
-        newSection: c.newSection
-      }
-    })
-
-    console.log(bodyChanges);
-
-    // 2. Request on Backend
-    requestHandler({
-      url: "/workspaces/versions/new",
-      method: "POST",
-      body: {
-        commitMessage: "Just change",
-        oldVersion: oldVersionId,
-        changes: bodyChanges
-      },
-      action: (c: any) => {
-        console.log('Result : ', c);
-      }
-    })
-
   }
 
   useEffect(() => {
@@ -200,7 +140,7 @@ export default function ChangesHistoryDrawer({
                         className="w-full group relative overflow-hidden rounded-lg border border-border/60 hover:border-primary/50 transition-all mb-3"
                       >
                         <div className="relative aspect-video bg-secondary/30 overflow-hidden">
-                          <img
+                          <Image
                             src={videoThumbnails[change.id] || "/placeholder.svg"}
                             alt="Video"
                             className="w-full h-full object-cover"
@@ -295,17 +235,6 @@ export default function ChangesHistoryDrawer({
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="border-t border-border/40 pt-4 mt-4 flex flex-col gap-2">
-            <Button
-              onClick={generateJSON}
-              disabled={changes.length === 0}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-5"
-            >
-              Final EDIT - Generate JSON
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">Copy final JSON to clipboard</p>
           </div>
         </div>
       </div>

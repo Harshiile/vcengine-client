@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
           password,
           confirmPassword: confirm
         },
-        action: ({ message }: any) => {
+        action: ({ message }: { message: string }) => {
           applyToast("Success", message);
           router.push('/login')
         }

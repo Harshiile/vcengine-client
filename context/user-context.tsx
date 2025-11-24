@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext } from "react"
 
-type User = Record<string, any> | null
+export type User = Record<string, any> | null
 type UserContextValue = {
     user: User
     setUser: (u: User) => void

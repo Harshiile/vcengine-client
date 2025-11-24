@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import Image from "next/image"
 
 interface VideoPlayerDrawerProps {
   isOpen: boolean
@@ -11,7 +11,6 @@ interface VideoPlayerDrawerProps {
   currentFile: File | null
   selectedVideo: "original" | "edited"
   onSelectVideo: (video: "original" | "edited") => void
-  onUploadOriginal: (file: File | null) => void
 }
 
 export default function VideoPlayerDrawer({
@@ -21,11 +20,9 @@ export default function VideoPlayerDrawer({
   currentFile,
   selectedVideo,
   onSelectVideo,
-  onUploadOriginal,
 }: VideoPlayerDrawerProps) {
   const [originalThumbnail, setOriginalThumbnail] = useState<string>("")
   const [editedThumbnail, setEditedThumbnail] = useState<string>("")
-  const [expandedVideo, setExpandedVideo] = useState<"original" | "edited" | null>(null)
   const videoRefs = { original: useRef<HTMLVideoElement>(null), edited: useRef<HTMLVideoElement>(null) }
 
   const hasEdited = currentFile && originalFile && currentFile !== originalFile
@@ -44,6 +41,7 @@ export default function VideoPlayerDrawer({
         }, 100)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originalFile])
 
   useEffect(() => {
@@ -60,6 +58,7 @@ export default function VideoPlayerDrawer({
         }, 100)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasEdited, currentFile])
 
   return (
@@ -93,7 +92,7 @@ export default function VideoPlayerDrawer({
               <div className="relative aspect-video bg-secondary/30 overflow-hidden">
                 {originalThumbnail ? (
                   <>
-                    <img
+                    <Image
                       src={originalThumbnail || "/placeholder.svg"}
                       alt="Original"
                       className="w-full h-full object-cover"
@@ -129,7 +128,7 @@ export default function VideoPlayerDrawer({
                   <div className="relative aspect-video bg-secondary/30 overflow-hidden">
                     {editedThumbnail ? (
                       <>
-                        <img
+                        <Image
                           src={editedThumbnail || "/placeholder.svg"}
                           alt="Edited"
                           className="w-full h-full object-cover"

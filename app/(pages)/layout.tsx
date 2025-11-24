@@ -1,20 +1,16 @@
 import type React from "react"
 import type { Metadata } from "next"
-// import { GeistSans } from "geist/font/sans"
-// import { GeistMono } from "geist/font/mono"
-// import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "@/app/globals.css"
 import { UserProvider } from "@/context/user-context"
 import { Toaster } from "@/components/ui/sonner"
-import { MainNavbar } from "./navbar"
 
 export const metadata: Metadata = {
-  title: "CinemaStudio - Professional Video Editor",
-  description: "Create stunning videos with CinemaStudio. Professional video editing tools for creators.",
-  generator: "v0.app",
+  title: "VcEngine",
+  icons: {
+    icon: "/logo.svg",
+  },
 }
-
 
 export default function RootLayout({
   children,
@@ -30,7 +26,6 @@ export default function RootLayout({
             <Toaster />
           </UserProvider>
         </Suspense>
-        {/* <Analytics /> */}
       </body>
     </html>
   )

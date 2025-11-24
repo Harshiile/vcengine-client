@@ -1,16 +1,13 @@
 import type React from "react"
 import type { Metadata } from "next"
-// import { GeistSans } from "geist/font/sans"
-// import { GeistMono } from "geist/font/mono"
-// import { Analytics } from "@vercel/analytics/next"
-import { Suspense } from "react"
 import "@/app/globals.css"
-import { MainNavbar } from "../../navbar"
+import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
-  generator: "v0.app",
+  title: "Edit | VcEngine",
+  icons: {
+    icon: "/logo.svg",
+  },
 }
 
 export default function RootLayout({
@@ -21,9 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body>
-        <MainNavbar />
-        {children}
-        {/*  <Suspense fallback={null}>{children}</Suspense> */}
+        <Suspense fallback={null}>{children}</Suspense>
       </body>
     </html>
   )

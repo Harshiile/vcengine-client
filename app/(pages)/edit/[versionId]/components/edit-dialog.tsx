@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import Image from "next/image"
 
 interface EditDialogProps {
   isOpen: boolean
@@ -106,7 +107,7 @@ export default function EditDialog({
                           className="w-full group relative overflow-hidden rounded-lg border border-border/60 hover:border-primary/50 transition-all"
                         >
                           <div className="relative aspect-video bg-secondary/30 overflow-hidden">
-                            <img
+                            <Image
                               src={videoThumbnail || "/placeholder.svg"}
                               alt="Preview"
                               className="w-full h-full object-cover"

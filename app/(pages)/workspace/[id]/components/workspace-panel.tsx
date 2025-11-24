@@ -1,15 +1,6 @@
 "use client"
 
-type VideoInfo = {
-  versionId: string
-  maxResolution: number
-  allResolutions: number[]
-  processedResolutions: number[]
-  poster: string
-  sources: Array<{ res: number; src: string }>
-}
-
-import { useMemo, useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Dispatch, SetStateAction } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Play, Pause, Settings, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
+import { ChevronDown, Play, Pause, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
 import VersionsPanel from "./versions-panel"
 import HLS from "hls.js"
 import { WorkspaceVersion } from "./workspace-shell"
@@ -27,15 +18,14 @@ import { requestHandler } from "@/lib/requestHandler"
 
 const ALL_RESOLUTIONS = [144, 240, 360, 480, 720, 1080, 1440, 2160]
 
-export default function WorkspacePanel({ workspaceId, versions }: {
-  workspaceId: string
+export default function WorkspacePanel({ activeVersion, setActiveVersion, versions }: {
+  activeVersion: WorkspaceVersion | null
+  setActiveVersion: Dispatch<SetStateAction<WorkspaceVersion | null>>
   versions: WorkspaceVersion[]
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const hlsRef = useRef<HLS | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
-
-  const [activeVersion, setActiveVersion] = useState<WorkspaceVersion>(versions[0])
 
   // Player UI states
   const [isPlaying, setIsPlaying] = useState(false)
@@ -54,9 +44,9 @@ export default function WorkspacePanel({ workspaceId, versions }: {
   useEffect(() => {
     const fetchRes = async () => {
       requestHandler({
-        url: `/videos/${activeVersion.id}/max-resolution`,
+        url: `/videos/${activeVersion?.id}/max-resolution`,
         method: "GET",
-        action: ({ maxResolution }: any) => {
+        action: ({ maxResolution }: { maxResolution: number }) => {
           const avail = ALL_RESOLUTIONS.filter(r => r <= maxResolution)
           setAvailableResolutions(avail)
           setSelectedResolution(avail[avail.length - 1])
@@ -74,17 +64,23 @@ export default function WorkspacePanel({ workspaceId, versions }: {
     const initHLS = async () => {
       setLoading(true)
       try {
+        // 🔥 Destroy previous HLS instance before creating new one
         if (hlsRef.current) {
-          // hlsRef.current?.destroy()
+          hlsRef.current.destroy()
           hlsRef.current = null
         }
 
         const playlistUrl = `http://localhost:1234/api/v1/videos/${activeVersion.id}/playlist/${selectedResolution}`
 
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          // Safari native support
           video.src = playlistUrl
         } else if (HLS.isSupported()) {
-          const hls = new HLS({ debug: false, enableWorker: true })
+          const hls = new HLS({
+            debug: false,
+            enableWorker: true,
+          })
+
           hls.loadSource(playlistUrl)
           hls.attachMedia(video)
 
@@ -105,13 +101,16 @@ export default function WorkspacePanel({ workspaceId, versions }: {
     }
 
     initHLS()
+
     return () => {
+      // Cleanup when component unmounts OR version/resolution changes
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
       }
     }
   }, [activeVersion, selectedResolution])
+
 
   const handlePlayPause = () => {
     if (!videoRef.current) return
@@ -287,9 +286,7 @@ export default function WorkspacePanel({ workspaceId, versions }: {
       <VersionsPanel
         versions={versions}
         activeVersion={activeVersion}
-        onChangeVersion={() => {
-          console.log("Version Changed !!")
-        }}
+        setActiveVersion={setActiveVersion}
       />
     </div>
   )

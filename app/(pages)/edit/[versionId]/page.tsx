@@ -4,15 +4,20 @@ import { useEffect, useRef, useState } from "react"
 import { FFmpeg } from "@ffmpeg/ffmpeg"
 import { fetchFile } from "@ffmpeg/util"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import VideoPlayerDrawer from "./components/video-player-drawer"
 import ChangesHistoryDrawer from "./components/changes-history-drawer"
 import EditFeaturesDialog from "./components/edit-features-dialog"
 import EditDialog from "./components/edit-dialog"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { requestHandler } from "@/lib/requestHandler"
 import { validate } from 'uuid'
 import OopsError from "@/components/OopsError"
+import { MainNavbar } from "../../navbar"
+import { Dialog } from "@radix-ui/react-dialog"
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
+import axios from "axios"
+import { applyToast } from "@/lib/toast"
 
 export type ChangeRecord = {
   id: number
@@ -23,6 +28,7 @@ export type ChangeRecord = {
   fileName?: string
   videoBFile?: File
   createdAt: string
+  clipIndex: number
 }
 
 export type EditState = {
@@ -33,17 +39,19 @@ export type EditState = {
 }
 
 export default function VideoEditor() {
-  // keep ffmpeg as a ref instance
   const { versionId } = useParams<{ versionId: string }>()
   const ffmpeg = useRef(new FFmpeg())
   const nextId = useRef(1)
+  const router = useRouter()
 
   const [originalFile, setOriginalFile] = useState<File | null>(null)
   const [currentFile, setCurrentFile] = useState<File | null>(null)
   const [currentUrl, setCurrentUrl] = useState<string>("")
   const [originalUrl, setOriginalUrl] = useState<string>("")
   const [invalidUUID, setInvalidUUID] = useState(false)
-
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [showUploadDialog, setShowUploadDialog] = useState<boolean>(false)
+  const [showUploadDialogTitle, setShowUploadDialogTitle] = useState("")
 
   const [selectedVideo, setSelectedVideo] = useState<"original" | "edited">("original")
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false)
@@ -158,68 +166,66 @@ export default function VideoEditor() {
         setInvalidUUID(true)
         return
       }
-      const maxResolution = await requestHandler({
+      await requestHandler({
         method: "GET",
         url: `/videos/${versionId}/max-resolution`,
-        action: ({ maxResolution }: any) => {
-          return maxResolution
+        action: async ({ maxResolution }: { maxResolution: number }) => {
+          const playlistUrl =
+            `http://localhost:1234/api/v1/videos/${versionId}/playlist/${maxResolution}`
+
+          setIsLoading(true)
+          setProgress(0)
+
+          try {
+            // 1) download all segments into a single TS File
+            const tsFile = await downloadSegmentUrls(playlistUrl)
+
+            if (cancelled) return
+
+            // 2) ensure ffmpeg ready
+            await ensureFF()
+
+            // show ffmpeg remux progress
+            ffmpeg.current.on("progress", ({ progress }) => {
+              // ratio comes as 0..1, mix with previous download progress to reflect activity
+              // here we just map ratio -> 0..100 during remux step
+              setProgress(Math.round(progress * 100))
+            })
+
+            // 3) write TS into ffmpeg FS
+            await writeFileToFF("input.ts", tsFile)
+
+            // 4) remux into MP4 (no re-encode) — fast
+            await ffmpeg.current.exec(["-i", "input.ts", "-c", "copy", "output.mp4"])
+
+            // 5) read output
+            const data = await ffmpeg.current.readFile("output.mp4")
+            const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" })
+            const mp4File = new File([mp4Blob], "video.mp4", { type: "video/mp4" })
+
+            if (cancelled) return
+
+            const url = URL.createObjectURL(mp4File)
+
+            // set into state
+            setOriginalFile(mp4File)
+            setCurrentFile(mp4File)
+            setOriginalUrl(url)
+            setCurrentUrl(url)
+            setSelectedVideo("original")
+
+            // put into history
+            setFileHistory([{ file: mp4File, url }])
+          } catch (err) {
+            console.error("Failed to load and remux HLS:", err)
+          } finally {
+            if (!cancelled) {
+              setIsLoading(false)
+              setProgress(0)
+            }
+          }
         }
       })
-
-      const playlistUrl =
-        `http://localhost:1234/api/v1/videos/${versionId}/playlist/${maxResolution}`
-
-      setIsLoading(true)
-      setProgress(0)
-
-      try {
-        // 1) download all segments into a single TS File
-        const tsFile = await downloadSegmentUrls(playlistUrl)
-
-        if (cancelled) return
-
-        // 2) ensure ffmpeg ready
-        await ensureFF()
-
-        // show ffmpeg remux progress
-        ffmpeg.current.on("progress", ({ progress }) => {
-          // ratio comes as 0..1, mix with previous download progress to reflect activity
-          // here we just map ratio -> 0..100 during remux step
-          setProgress(Math.round(progress * 100))
-        })
-
-        // 3) write TS into ffmpeg FS
-        await writeFileToFF("input.ts", tsFile)
-
-        // 4) remux into MP4 (no re-encode) — fast
-        await ffmpeg.current.exec(["-i", "input.ts", "-c", "copy", "output.mp4"])
-
-        // 5) read output
-        const data = await ffmpeg.current.readFile("output.mp4")
-        const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" })
-        const mp4File = new File([mp4Blob], "video.mp4", { type: "video/mp4" })
-
-        if (cancelled) return
-
-        const url = URL.createObjectURL(mp4File)
-
-        // set into state
-        setOriginalFile(mp4File)
-        setCurrentFile(mp4File)
-        setOriginalUrl(url)
-        setCurrentUrl(url)
-        setSelectedVideo("original")
-
-        // put into history
-        setFileHistory([{ file: mp4File, url }])
-      } catch (err) {
-        console.error("Failed to load and remux HLS:", err)
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false)
-          setProgress(0)
-        }
-      }
     }
 
     loadAndRemux()
@@ -227,40 +233,8 @@ export default function VideoEditor() {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // -------------------------
-  // Remaining helpers (unchanged)
-  // -------------------------
-  const getDuration = (file: File): Promise<number> =>
-    new Promise((res, rej) => {
-      const url = URL.createObjectURL(file)
-      const v = document.createElement("video")
-      v.preload = "metadata"
-      v.src = url
-      v.onloadedmetadata = () => {
-        const d = v.duration || 0
-        URL.revokeObjectURL(url)
-        res(d)
-      }
-      v.onerror = () => {
-        URL.revokeObjectURL(url)
-        rej(new Error("Failed to load video metadata"))
-      }
-    })
-
-  const handleUploadOriginal = (file: File | null) => {
-    if (file) {
-      setOriginalFile(file)
-      setCurrentFile(file)
-      const url = URL.createObjectURL(file)
-      setOriginalUrl(url)
-      setCurrentUrl(url)
-      setSelectedVideo("original")
-      setChanges([])
-      setFileHistory([])
-    }
-  }
 
   const handleUndo = () => {
     if (fileHistory.length === 0) {
@@ -356,6 +330,7 @@ export default function VideoEditor() {
 
       const record: ChangeRecord = {
         id: nextId.current++,
+        clipIndex: changes.length + 1,
         type: editType,
         startTimestamp: start,
         endTimestamp: editType === "add" ? undefined : end,
@@ -456,167 +431,210 @@ export default function VideoEditor() {
 
   const displayUrl = selectedVideo === "original" ? originalUrl : currentUrl
 
-  return (
-    <>
-      {invalidUUID && (
-        <OopsError
-          title="Invalid Version ID"
-          message="The version ID you provided is not a valid UUID. Please check the link and try again."
-        />
-      )}
+  const handleSubmitFinal = async () => {
 
-      {/* FULL SCREEN CONTAINER */}
-      <div className="w-screen h-screen overflow-hidden bg-[#0c0c0c] text-white flex flex-col items-center justify-center relative">
+    // 1. Upload all clips
+    for (const c of changes) {
+      if (c.type != "remove") {
+        // Upload File
+        await requestHandler({
+          url: '/storage/signed-url',
+          method: "POST",
+          body: {
+            type: "clip",
+            contentType: c.videoBFile?.type
+          },
+          action: async ({ uploadUrl }: { uploadUrl: string }) => {
+            setUploadProgress(0) // ensure it reaches 100%
+            setShowUploadDialog(true)
+            setShowUploadDialogTitle(`Uploading Clip #${c.clipIndex}`);
 
-        {/* LOADING OVERLAY */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-            <div className="animate-spin h-14 w-14 border-4 border-white border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-sm opacity-70">Loading video...</p>
+            // Uploading
+            await axios.put(uploadUrl, c.videoBFile, {
+              headers: { "Content-Type": c.videoBFile?.type },
+              onUploadProgress: (evt) => {
+                if (!evt.total) return
+                const percent = Math.round((evt.loaded / evt.total) * 100)
+                setUploadProgress(percent)
+              },
+            }).catch(() => {
+              throw new Error()
+            })
+            setUploadProgress(100) // ensure it reaches 100%
+            setShowUploadDialog(false)
+          }
+        })
+      }
+    }
 
-            {/* Progress bar inside loader */}
-            {progress > 0 && (
-              <div className="w-64 mt-6">
-                <div className="text-xs opacity-70 mb-1 text-center">Processing: {progress}%</div>
-                <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-white h-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+    applyToast("Success", "Video is sent for processing")
+    router.push("/dashboard")
+  }
+
+  return <>
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-[#0C0C0C]">
+
+      {/* ---------------- NAVBAR ---------------- */}
+      <MainNavbar />
+
+      <>
+        {
+          invalidUUID && (
+            <OopsError
+              title="Invalid Version ID"
+              message="The version ID provided is incorrect. Please verify and try again."
+            />
+          )
+        }
+
+        <div className="w-screen h-screen bg-[#0C0C0C] text-white flex flex-col items-center justify-center overflow-hidden relative">
+
+          <Dialog open={showUploadDialog} >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{showUploadDialogTitle}</DialogTitle>
+                <DialogDescription>Your file is being uploaded to secure storage.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Progress value={uploadProgress} />
+                <div className="text-sm text-muted-foreground text-right">{uploadProgress}%</div>
+              </div>
+            </DialogContent>
+          </Dialog >
+
+          {/* LOADING OVERLAY */}
+          {isLoading && (
+            <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xl flex flex-col items-center justify-center">
+              <div className="animate-spin h-14 w-14 border-4 border-white border-t-transparent rounded-full" />
+              <p className="mt-4 text-sm opacity-60">Processing video...</p>
+
+              {progress > 0 && (
+                <div className="w-64 mt-6">
+                  <p className="text-xs opacity-60 text-center mb-1">{progress}%</p>
+                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-white transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* PROGRESS BAR (outside loader) */}
-        {!isLoading && progress > 0 && (
-          <div className="absolute top-4 w-[90vw] max-w-5xl">
-            <div className="text-xs opacity-70 mb-1">Processing: {progress}%</div>
-            <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-white h-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* CENTER BOX (VIDEO + BUTTONS) */}
-        <div className="w-[92vw] max-w-6xl">
+          {/* OUTER WRAPPER */}
+          <div className="w-[92vw] max-w-6xl">
 
-          {/* VIDEO PLAYER */}
-          <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-            {displayUrl ? (
-              <video
-                src={displayUrl}
-                controls
-                className="w-full h-full object-cover rounded-2xl"
-                controlsList="nodownload"
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-white/60">
-                <div className="text-4xl mb-2">📹</div>
-                <p>No video loaded</p>
+            {/* VIDEO PLAYER */}
+
+            <div className="w-full aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/60 backdrop-blur-xl">
+              {displayUrl ? (
+                <video
+                  src={displayUrl}
+                  controls
+                  className="w-full h-full object-cover rounded-2xl"
+                  controlsList="nodownload"
+                />
+              ) : (
+                <div className="flex w-full h-full items-center justify-center text-white/60">
+                  <p>No video loaded</p>
+                </div>
+              )}
+            </div>
+
+            {/* BUTTONS */}
+            {
+              currentFile &&
+              <div className="flex gap-4 mt-8 w-full">
+
+                <Button
+                  onClick={() => setLeftDrawerOpen(true)}
+                  className="flex-1 h-14 rounded-xl bg-white border border-white/10 transition hover:cursor-pointer"
+                >
+                  Change Video
+                </Button>
+
+                <Button
+                  onClick={() => setShowFeaturesDialog(true)}
+                  className="flex-1 h-14 rounded-xl bg-white border border-white/10 transition hover:cursor-pointer"
+                >
+                  ✎ Edit Video
+                </Button>
+
+                <Button
+                  onClick={() => setRightDrawerOpen(true)}
+                  className="flex-1 h-14 rounded-xl bg-white border border-white/10 transition hover:cursor-pointer"
+                >
+                  Show Changes ({changes.length})
+                </Button>
+
+                <Button
+                  onClick={handleSubmitFinal}
+                  className="flex-1 h-14 rounded-xl bg-white border border-white/10 transition hover:cursor-pointer"
+                >
+                  Submit
+                </Button>
+
               </div>
-            )}
+            }
           </div>
 
-          {/* BUTTONS ROW */}
-          <div className="w-full flex items-center justify-between gap-4 mt-8">
+          {/* DRAWERS */}
+          <VideoPlayerDrawer
+            isOpen={leftDrawerOpen}
+            onClose={() => setLeftDrawerOpen(false)}
+            originalFile={originalFile}
+            currentFile={currentFile}
+            selectedVideo={selectedVideo}
+            onSelectVideo={setSelectedVideo}
+          />
 
-            {/* Change Video */}
-            <Button
-              onClick={() => setLeftDrawerOpen(true)}
-              disabled={isLoading || !currentFile}
-              className="flex-1 h-14 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10"
-            >
-              Change Video
-            </Button>
+          <ChangesHistoryDrawer
+            isOpen={rightDrawerOpen}
+            onClose={() => setRightDrawerOpen(false)}
+            changes={changes}
+            onUpdateChange={updateChange}
+            onDeleteChange={deleteChange}
+            onUndo={handleUndo}
+            canUndo={changes.length > 0}
+          />
 
-            {/* Edit */}
-            <Button
-              onClick={() => setShowFeaturesDialog(true)}
-              disabled={isLoading || !currentFile}
-              className="flex-1 h-14 rounded-xl bg-blue-500/20 hover:bg-blue-500/40 border border-blue-500/30 text-blue-200"
-            >
-              ✎ Edit Video
-            </Button>
+          {showFeaturesDialog && (
+            <EditFeaturesDialog
+              isOpen
+              onClose={() => setShowFeaturesDialog(false)}
+              onSelectFeature={(type) => {
+                setEditState((prev) => ({ ...prev, type }))
+                setShowFeaturesDialog(false)
+              }}
+            />
+          )}
 
-            {/* Show Changes */}
-            <Button
-              onClick={() => setRightDrawerOpen(true)}
-              disabled={isLoading || !currentFile}
-              className="flex-1 h-14 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10"
-            >
-              Show Changes ({changes.length})
-            </Button>
-          </div>
+          {editState.type && (
+            <EditDialog
+              isOpen
+              onClose={() =>
+                setEditState({
+                  type: null,
+                  startTimestamp: "0",
+                  endTimestamp: "0",
+                  uploadedFile: null,
+                })
+              }
+              editType={editState.type}
+              startTimestamp={editState.startTimestamp}
+              endTimestamp={editState.endTimestamp}
+              uploadedFile={editState.uploadedFile}
+              onStartTimestampChange={(v) => setEditState((p) => ({ ...p, startTimestamp: v }))}
+              onEndTimestampChange={(v) => setEditState((p) => ({ ...p, endTimestamp: v }))}
+              onFileChange={(f) => setEditState((p) => ({ ...p, uploadedFile: f }))}
+              onApply={() => applyEdit(editState.type!)}
+              loading={loading}
+            />
+          )}
         </div>
-
-        {/* DRAWERS / DIALOGS */}
-        <VideoPlayerDrawer
-          isOpen={leftDrawerOpen}
-          onClose={() => setLeftDrawerOpen(false)}
-          originalFile={originalFile}
-          currentFile={currentFile}
-          selectedVideo={selectedVideo}
-          onSelectVideo={setSelectedVideo}
-          onUploadOriginal={handleUploadOriginal}
-        />
-
-        <ChangesHistoryDrawer
-          oldVersionId={versionId}
-          isOpen={rightDrawerOpen}
-          onClose={() => setRightDrawerOpen(false)}
-          changes={changes}
-          onUpdateChange={updateChange}
-          onDeleteChange={deleteChange}
-          onUndo={handleUndo}
-          canUndo={changes.length > 0}
-        />
-
-        {showFeaturesDialog && (
-          <EditFeaturesDialog
-            isOpen={showFeaturesDialog}
-            onClose={() => setShowFeaturesDialog(false)}
-            onSelectFeature={(type) => {
-              setEditState((prev) => ({ ...prev, type }))
-              setShowFeaturesDialog(false)
-            }}
-          />
-        )}
-
-        {editState.type && (
-          <EditDialog
-            isOpen={!!editState.type}
-            onClose={() =>
-              setEditState({
-                type: null,
-                startTimestamp: "0",
-                endTimestamp: "0",
-                uploadedFile: null,
-              })
-            }
-            editType={editState.type}
-            startTimestamp={editState.startTimestamp}
-            endTimestamp={editState.endTimestamp}
-            uploadedFile={editState.uploadedFile}
-            onStartTimestampChange={(value) =>
-              setEditState((prev) => ({ ...prev, startTimestamp: value }))
-            }
-            onEndTimestampChange={(value) =>
-              setEditState((prev) => ({ ...prev, endTimestamp: value }))
-            }
-            onFileChange={(file) =>
-              setEditState((prev) => ({ ...prev, uploadedFile: file }))
-            }
-            onApply={() => applyEdit(editState.type!)}
-            loading={loading}
-          />
-        )}
-      </div>
-    </>
-  )
+      </>
+    </div>
+  </>
 
 }

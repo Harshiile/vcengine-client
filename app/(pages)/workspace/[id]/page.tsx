@@ -1,10 +1,10 @@
-// import "@/styles/cinemastudio-theme.css"
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import WorkspaceShell, { Workspace } from "./components/workspace-shell"
 import { requestHandler } from "@/lib/requestHandler"
 import { useParams } from "next/navigation"
+import { MainNavbar } from "../../navbar"
 
 export default function WorkspacePage() {
   const { id } = useParams<{ id: string }>()
@@ -14,21 +14,28 @@ export default function WorkspacePage() {
     requestHandler({
       url: `/workspaces/${id}`,
       method: "GET",
-      action: ({ workspace }: any) => {
+      action: ({ workspace }: { workspace: Workspace }) => {
         setWorkspace(workspace)
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
-    <main className="min-h-screen">
-      {
-        workspace ?
-          <WorkspaceShell workspace={workspace} />
-          :
-          <p>No Workspace Found</p>
-      }
+    <div className="w-screen h-screen overflow-hidden flex flex-col bg-[#0C0C0C]">
 
-    </main>
+      {/* ---------------- NAVBAR ---------------- */}
+      <MainNavbar />
+
+      <main className="min-h-screen">
+        {
+          workspace ?
+            <WorkspaceShell workspace={workspace} />
+            :
+            <p>No Workspace Found</p>
+        }
+
+      </main>
+    </div>
   )
 }

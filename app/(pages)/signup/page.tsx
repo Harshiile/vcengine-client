@@ -21,10 +21,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { HardDrive, Layers, Cloud, Gauge, ArrowRight, Sparkles, Eye, EyeOff } from "lucide-react"
+import { HardDrive, Layers, Cloud, Gauge, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import axios from "axios"
-import { useUser } from "@/context/user-context"
+import { User, useUser } from "@/context/user-context"
 import { requestHandler } from "@/lib/requestHandler"
 import { applyToast } from "@/lib/toast"
 
@@ -85,8 +85,7 @@ export default function Signup() {
       requestHandler({
         url: `/auth/username/uniqueness/${formData.username}`,
         method: 'GET',
-        action: async (isUsernameExist: any) => {
-
+        action: async ({ isUsernameExist }: { isUsernameExist: boolean }) => {
           // Username Exists
           if (isUsernameExist) {
             applyToast('Error', "Username already exists")
@@ -115,7 +114,7 @@ export default function Signup() {
               name: formData.name,
               ...(avatarKey && { avatar: avatarKey }),
             },
-            action: ({ user }: any) => {
+            action: ({ user }: { user: User }) => {
               setUser(user)
               applyToast('Success', "Signup Successfully !!")
               router.push('/dashboard')
@@ -124,7 +123,8 @@ export default function Signup() {
             .finally(() => setIsLoading(false))
         }
       })
-    } catch (error: any) {
+    } catch (error) {
+      console.log(error);
       setIsLoading(false)
       setShowUploadDialog(false)
     }
@@ -140,7 +140,7 @@ export default function Signup() {
           contentType: formData.selectedFile?.type,
           type: "avatar",
         },
-        action: async ({ uploadUrl, fileKey }: any) => {
+        action: async ({ uploadUrl, fileKey }: { uploadUrl: string, fileKey: string }) => {
 
           await axios.put(uploadUrl, formData.selectedFile, {
             headers: {
@@ -274,7 +274,7 @@ export default function Signup() {
                   </div>
 
                   {avatarPreview ? (
-                    <img
+                    <Image
                       src={avatarPreview || "/placeholder.svg"}
                       alt="Selected profile"
                       className="w-full h-full object-cover"
@@ -304,7 +304,7 @@ export default function Signup() {
                   accept="image/*"
                   onChange={(e) => {
                     const file = handleAvatarChange(e)
-                    file && handleInputChange("selectedFile", file)
+                    if (file) handleInputChange("selectedFile", file)
                   }}
                   className="sr-only"
                 />

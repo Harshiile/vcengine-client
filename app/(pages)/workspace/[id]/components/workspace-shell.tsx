@@ -31,38 +31,62 @@ export interface Workspace {
   Branch: WorkspaceBranch[]
 }
 
-
 export default function WorkspaceShell({ workspace }: { workspace: Workspace }) {
 
-  const [activeVersion, setActiveVersion] = useState<string>()
   const [versions, setVersions] = useState<WorkspaceVersion[]>([])
+  const [activeVersion, setActiveVersion] = useState<WorkspaceVersion | null>(null)
+
+  const [branches, setBranches] = useState<WorkspaceBranch[]>([])
+  const [activeBranch, setActiveBranch] = useState<WorkspaceBranch | null>(null)
+
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const { user } = useUser()
 
   useEffect(() => {
+
+    // Fetch Branches
     requestHandler({
-      url: `/workspaces/${workspace.id}/versions`,
+      url: `/workspaces/${workspace.id}/branches`,
       method: "GET",
-      action: ({ versions }: any) => {
-        setVersions(versions);
-        setActiveVersion(versions[0]) // Currently set activeVersion as first element -> Change it to real activeVersion
+      action: ({ branches }: { branches: WorkspaceBranch[] }) => {
+        console.log(branches);
+
+        setBranches(branches);
+        setActiveBranch(branches[0])
       }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    requestHandler({
+      url: `/workspaces/${activeBranch?.id}/versions`,
+      method: "GET",
+      action: ({ versions }: { versions: WorkspaceVersion[] }) => {
+        console.log(versions);
+        setVersions(versions);
+        if (versions.length > 0) setActiveVersion(versions[0]) // Currently set activeVersion as first element -> Change it to real activeVersion
+      }
+    })
+  }, [activeBranch])
 
   return (
     <div className="px-4 md:px-8">
       <WorkspaceHeader
+        branches={branches}
         workspaceId={workspace?.id}
         workspaceName={workspace?.name}
         setIsDrawerOpen={setIsDrawerOpen}
+        activeVersion={activeVersion!}
+        activeBranch={activeBranch!}
+        setActiveBranch={setActiveBranch}
       />
 
       {
         activeVersion &&
         <WorkspacePanel
-          workspaceId={workspace.id}
           versions={versions}
+          activeVersion={activeVersion} setActiveVersion={setActiveVersion}
         />
       }
 

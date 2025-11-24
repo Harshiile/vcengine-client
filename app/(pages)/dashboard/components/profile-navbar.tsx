@@ -1,7 +1,7 @@
 "use client"
-import { Plus, BarChart3, FolderOpen, Star, Edit2 } from "lucide-react"
+import { Plus, FolderOpen, Edit2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
@@ -9,6 +9,7 @@ interface ProfileNavbarProps {
   activeTab: string
   onTabChange: (tab: string) => void
   profileData: {
+    name: string
     username: string
     profileImage: string
     bio?: string
@@ -19,9 +20,7 @@ interface ProfileNavbarProps {
 export function ProfileNavbar({ activeTab, onTabChange, profileData, onEditProfile }: ProfileNavbarProps) {
   const router = useRouter()
   const tabs = [
-    // { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "repositories", label: "Repositories", icon: FolderOpen },
-    // { id: "stars", label: "Stars", icon: Star },
   ]
 
   return (
@@ -31,11 +30,13 @@ export function ProfileNavbar({ activeTab, onTabChange, profileData, onEditProfi
         <div className="flex items-center space-x-4 mb-6">
           <Avatar className="h-16 w-16 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-300">
             <AvatarImage src={profileData.profileImage || "/developer-avatar.png"} alt="Profile" />
-            {/* <AvatarFallback className="text-lg">{profileData.username.charAt(0).toUpperCase()}</AvatarFallback> */}
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{profileData?.username?.charAt(0)?.toUpperCase()}{profileData?.username?.slice(1)}</h1>
+              <p className="text-2xl font-bold text-foreground">
+                {profileData?.name?.charAt(0)?.toUpperCase()}
+                {profileData?.name?.slice(1)}
+              </p>
               {onEditProfile && (
                 <Button
                   variant="outline"

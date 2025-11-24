@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { HardDrive, Layers, Cloud, Gauge, ArrowRight, Sparkles, Eye, EyeOff } from "lucide-react"
+import { HardDrive, Layers, Cloud, Gauge, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useUser } from "@/context/user-context"
+import { User, useUser } from "@/context/user-context"
 import { requestHandler } from "@/lib/requestHandler"
 import { applyToast } from "@/lib/toast"
 import {
@@ -47,7 +47,7 @@ export default function Login() {
       url: "/auth/password/request",
       method: "POST",
       body: { email: forgotEmail },
-      action: ({ message }: any) => {
+      action: ({ message }: { message: string }) => {
         applyToast("Success", message)
         setForgotOpen(false)
       },
@@ -69,7 +69,7 @@ export default function Login() {
         email,
         password,
       },
-      action: ({ user }: any) => {
+      action: ({ user }: { user: User }) => {
         setUser(user)
         applyToast("Success", "Login Success !!")
         router.push("/dashboard")

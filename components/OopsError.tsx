@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Link from "next/link"
 
 export default function OopsError({
     title = "Oops! Something went wrong.",
@@ -30,12 +31,12 @@ export default function OopsError({
 
                 <p className="text-zinc-400 text-lg mb-10">{message}</p>
 
-                <a
+                <Link
                     href="/"
                     className="inline-block px-6 py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition"
                 >
                     Go Back Home
-                </a>
+                </Link>
             </motion.div>
         </div>
     )

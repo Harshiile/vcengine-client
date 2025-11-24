@@ -3,51 +3,162 @@
 import type React from "react"
 
 import { Button } from "@/components/ui/button"
-import { Star, GitFork, Download, Sparkles, ChevronDown } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Download, ChevronDown, Plus } from "lucide-react"
 import { useUser } from "@/context/user-context"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useEffect, useState } from "react"
-import { WorkspaceBranch } from "./workspace-shell"
+import { Dispatch, SetStateAction, useState } from "react"
+import { WorkspaceBranch, WorkspaceVersion } from "./workspace-shell"
 import Link from "next/link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { requestHandler } from "@/lib/requestHandler"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+
+
+export function BranchSelector({
+  branches,
+  activeBranch,
+  activeVersion,
+  workspaceId,
+  setActiveBranch
+}: {
+  workspaceId: string
+  branches: WorkspaceBranch[]
+  activeBranch: WorkspaceBranch
+  setActiveBranch: Dispatch<SetStateAction<WorkspaceBranch | null>>
+  activeVersion: WorkspaceVersion,
+}) {
+  const [openDialog, setOpenDialog] = useState(false)
+  const [newBranchName, setNewBranchName] = useState("")
+
+  const handleCreate = () => {
+    if (!newBranchName.trim()) return
+    setNewBranchName("")
+    setOpenDialog(false)
+
+    requestHandler({
+      url: "/workspaces/branches",
+      method: "POST",
+      body: {
+        workspaceId: workspaceId,
+        createdFromVersion: activeVersion.id,
+        name: newBranchName
+      },
+      action: (({ message }: { message: string }) => {
+        console.log(message);
+      })
+    })
+  }
+
+  return (
+    <>
+      {/* Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
+          >
+            <span className="text-sm">{activeBranch?.name}</span>
+            <ChevronDown className="w-4 h-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-56 z-[60]">
+          <DropdownMenuLabel>Branch Selection</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {/* Branch list */}
+          {branches?.map((b) => (
+            <DropdownMenuItem
+              key={b.id}
+              onClick={() => setActiveBranch(b)}
+              className={`justify-between cursor-pointer ${b.id === activeBranch.id
+                ? "bg-primary/10 text-primary font-medium"
+                : "hover:bg-muted/50"
+                }`}
+            >
+              <span>{b.name}</span>
+            </DropdownMenuItem>
+          ))}
+
+          <DropdownMenuSeparator />
+
+          {/* NEW BRANCH BUTTON */}
+          <DropdownMenuItem
+            onClick={() => setOpenDialog(true)}
+            className="justify-between text-primary cursor-pointer hover:bg-primary/10"
+          >
+            <span className="flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Branch
+            </span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Dialog for creating new branch */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Branch</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Current Version</label>
+              <p className="text-muted-foreground text-sm mt-1">{activeVersion?.commitMessage}</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Branch Name</label>
+              <Input
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                placeholder="Enter branch name"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} disabled={!newBranchName.trim()}>
+              Create Branch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
 
 export default function WorkspaceHeader({
   workspaceId,
   workspaceName,
-  setIsDrawerOpen
+  setIsDrawerOpen,
+  activeVersion,
+  branches,
+  activeBranch,
+  setActiveBranch,
 }: {
   workspaceId: string
   workspaceName: string,
+  branches: WorkspaceBranch[],
+  activeVersion: WorkspaceVersion,
+  activeBranch: WorkspaceBranch,
+  setActiveBranch: Dispatch<SetStateAction<WorkspaceBranch | null>>
   setIsDrawerOpen: (option: boolean) => void
 }) {
 
-  const router = useRouter()
-  const [branches, setBranches] = useState<WorkspaceBranch[]>([])
-  const [selectedBranch, setSelectedBranch] = useState({
-    id: "",
-    name: ""
-  })
-  const [selectedVersion, setSelectedVersion] = useState("")
   const { user } = useUser()
 
   const downloadVideo = () => {
-    const downloadUrl = `http://localhost:1234/api/v1/videos/download/${workspaceId}/${selectedVersion}`
+    const downloadUrl = `http://localhost:1234/api/v1/videos/download/${workspaceId}/${activeVersion.id}`
     window.location.href = downloadUrl;
   }
-
-  useEffect(() => {
-    requestHandler({
-      url: `/workspaces/${workspaceId}/branches`,
-      method: "GET",
-      action: ({ branches }: any) => {
-        setBranches(branches)
-        setSelectedBranch({ id: branches[0].id, name: branches[0].name })
-        setSelectedVersion(branches[0].versions[0].id)
-      }
-    })
-  }, [])
 
   return (
     <div className="px-6 py-4">
@@ -63,32 +174,13 @@ export default function WorkspaceHeader({
         {/* Right: Controls */}
         <div className="flex items-center gap-3">
           {/* Branch Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
-              >
-                <span className="text-sm">{selectedBranch.name}</span>
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 z-[60]">
-              <DropdownMenuLabel>Branch Selection</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {branches.map((b) => {
-                return (
-                  <DropdownMenuItem
-                    key={b.id}
-                    className={`justify-between ${b.id === selectedBranch.id ? "bg-gray-200 text-black font-medium" : ""}`}
-                  >
-                    <span>{b.name}</span>
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          <BranchSelector
+            branches={branches}
+            activeBranch={activeBranch} setActiveBranch={setActiveBranch}
+            activeVersion={activeVersion}
+            workspaceId={workspaceId}
+          />
 
           {/* Download Button */}
           <Button
@@ -109,7 +201,7 @@ export default function WorkspaceHeader({
           </Button>
 
           {/* Edit Button */}
-          <Link href={`/edit/${selectedVersion}`}>
+          <Link href={`/edit/${activeVersion?.id}`}>
             <Button variant="outline" size="sm" className="border-gray-700 hover:bg-gray-900 bg-transparent">
               Edit
             </Button>
