@@ -36,24 +36,8 @@ export function MainNavbar() {
                 {/* Logo */}
                 <Image src={logo} alt="V'DURA" />
 
-                {/* Search Bar */}
-                <div className="flex-1 max-w-md mx-8">
-                    <div className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""}`}>
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                        <Input
-                            placeholder="Search repositories, workspaces..."
-                            className="pl-10 bg-secondary/50 border-border hover:border-primary/50 focus:border-primary transition-all duration-300"
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setSearchFocused(false)}
-                        />
-                    </div>
-                </div>
-
                 {/* Profile Section */}
                 <div className="flex items-center space-x-4">
-                    <Button variant="ghost" size="sm" className="hover:bg-accent hover:scale-105 transition-all duration-200">
-                        <Bell className="w-4 h-4" />
-                    </Button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -73,15 +57,11 @@ export function MainNavbar() {
                                     <AvatarFallback>{user?.username.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium">{user?.username}</p>
+                                    <p className="font-medium">{user?.username?.charAt(0)?.toUpperCase()}{user?.username?.slice(1)}</p>
                                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                                 </div>
                             </div>
-                            <DropdownMenuItem className="hover:bg-accent transition-colors">
-                                <BarChart3 className="mr-2 h-4 w-4" />
-                                Overview
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-accent transition-colors">
+                            <DropdownMenuItem onClick={() => { router.push("/dashboard") }} className="hover:bg-accent transition-colors">
                                 <FolderOpen className="mr-2 h-4 w-4" />
                                 Repositories
                             </DropdownMenuItem>

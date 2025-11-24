@@ -7,24 +7,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { EditProfileDialog } from "./edit-profile-dialog"
 
 interface ProfileSidebarProps {
-  profileData?: {
+  profileData: {
     username: string
     email: string
-    description: string
-    website: string
-    location: string
-    profileImage: string
+    description?: string
+    website?: string
+    profileImage?: string
   }
-  onProfileSave: (data: ProfileSidebarProps["profileData"]) => void
 }
 
-export function ProfileSidebar({ profileData, onProfileSave }: ProfileSidebarProps) {
-  const achievements = [
-    { name: "Early Adopter", icon: "🚀", description: "Joined in the first month" },
-    { name: "Code Master", icon: "💻", description: "100+ repositories created" },
-    { name: "Team Player", icon: "🤝", description: "50+ collaborations" },
-    { name: "Star Collector", icon: "⭐", description: "1000+ stars earned" },
-  ]
+export function ProfileSidebar({ profileData }: ProfileSidebarProps) {
+
+  const handleProfileSave = () => {
+    // console.log("[v0] Profile updated:", updatedProfile)
+  }
+
 
   return (
     <div className="w-full space-y-6 animate-float-up">
@@ -44,16 +41,15 @@ export function ProfileSidebar({ profileData, onProfileSave }: ProfileSidebarPro
               <p className="text-muted-foreground">{profileData?.email}</p>
             </div>
 
-            {/* <EditProfileDialog initialData={profileData} onSave={onProfileSave}> */}
-            <Button
-              variant="outline"
-              disabled
-              className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-300 bg-card border-primary/50 text-primary hover:border-primary hover-lift"
-            >
-              <span className="mr-2">✏️</span>
-              Edit Profile
-            </Button>
-            {/* </EditProfileDialog> */}
+            <EditProfileDialog initialData={profileData}>
+              <Button
+                variant="outline"
+                className="w-full hover:bg-primary hover:text-primary-foreground transition-all duration-300 bg-card border-primary/50 text-primary hover:border-primary hover-lift"
+              >
+                <span className="mr-2">✏️</span>
+                Edit Profile
+              </Button>
+            </EditProfileDialog>
           </div>
         </CardContent>
       </Card>
@@ -67,10 +63,6 @@ export function ProfileSidebar({ profileData, onProfileSave }: ProfileSidebarPro
           <p className="text-sm text-muted-foreground leading-relaxed">{profileData?.description}</p>
 
           <div className="space-y-2 text-sm">
-            <div className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
-              <MapPin className="w-4 h-4" />
-              <span>{profileData?.location}</span>
-            </div>
             <div className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
               <LinkIcon className="w-4 h-4" />
               <span className="text-primary hover:underline cursor-pointer">{profileData?.website}</span>
@@ -79,34 +71,6 @@ export function ProfileSidebar({ profileData, onProfileSave }: ProfileSidebarPro
               <Calendar className="w-4 h-4" />
               <span>Joined March 2023</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Achievements */}
-      <Card className="hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover-lift bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center text-foreground">
-            <Award className="w-5 h-5 mr-2 text-primary" />
-            Achievements
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {achievements.map((achievement, index) => (
-              <div
-                key={achievement.name}
-                className="p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-all duration-300 hover:scale-105 cursor-pointer group border border-border/50 hover-lift"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="text-center space-y-1">
-                  <div className="text-2xl group-hover:scale-110 transition-transform duration-300">
-                    {achievement.icon}
-                  </div>
-                  <div className="text-xs font-medium text-foreground">{achievement.name}</div>
-                </div>
-              </div>
-            ))}
           </div>
         </CardContent>
       </Card>

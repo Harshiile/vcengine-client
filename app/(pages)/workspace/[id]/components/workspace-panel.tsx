@@ -1,23 +1,5 @@
 "use client"
 
-import { useMemo, useState, useRef } from "react"
-// import useSWR from "swr"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown, Play, Settings } from "lucide-react"
-import VersionsPanel from "./versions-panel"
-import { WorkspaceVersion } from "./workspace-shell"
-import useSWR from "swr"
-// import { fetcher } from "@/lib/fetcher"
-// import type { WorkspaceVersion } from "@/lib/types"
-
 type VideoInfo = {
   versionId: string
   maxResolution: number
@@ -27,167 +9,288 @@ type VideoInfo = {
   sources: Array<{ res: number; src: string }>
 }
 
-export default function WorkspacePanel({
-  workspaceId,
-  versions,
-  activeVersion,
-  onChangeVersion,
-}: {
+import { useMemo, useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown, Play, Pause, Settings, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
+import VersionsPanel from "./versions-panel"
+import HLS from "hls.js"
+import { WorkspaceVersion } from "./workspace-shell"
+import { requestHandler } from "@/lib/requestHandler"
+
+const ALL_RESOLUTIONS = [144, 240, 360, 480, 720, 1080, 1440, 2160]
+
+export default function WorkspacePanel({ workspaceId, versions }: {
   workspaceId: string
   versions: WorkspaceVersion[]
-  activeVersion: string
-  onChangeVersion: (id: string) => void
 }) {
-  const { data, isLoading, mutate } = useSWR<VideoInfo>(
-    `/api/workspace/${workspaceId}/video?version=${activeVersion}`,
-    // fetcher,
-    {
-      refreshInterval: 2500, // poll to reflect processing changes
-    },
-  )
-  const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [showUi, setShowUi] = useState(true)
-  const hideTimerRef = useRef<number | null>(null)
+  const hlsRef = useRef<HLS | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
 
-  const showUiForAWhile = () => {
-    setShowUi(true)
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current)
-      hideTimerRef.current = null
+  const [activeVersion, setActiveVersion] = useState<WorkspaceVersion>(versions[0])
+
+  // Player UI states
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const [availableResolutions, setAvailableResolutions] = useState<number[]>([])
+  const [selectedResolution, setSelectedResolution] = useState(360)
+
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+
+  // Fetch max resolution for the version
+  useEffect(() => {
+    const fetchRes = async () => {
+      requestHandler({
+        url: `/videos/${activeVersion.id}/max-resolution`,
+        method: "GET",
+        action: ({ maxResolution }: any) => {
+          const avail = ALL_RESOLUTIONS.filter(r => r <= maxResolution)
+          setAvailableResolutions(avail)
+          setSelectedResolution(avail[avail.length - 1])
+        }
+      })
     }
-    // hide after 2 seconds when playing
-    if (isPlaying) {
-      hideTimerRef.current = window.setTimeout(() => {
-        setShowUi(false)
-      }, 2000)
+    fetchRes()
+  }, [activeVersion])
+
+  // Load HLS video
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !activeVersion) return
+
+    const initHLS = async () => {
+      setLoading(true)
+      try {
+        if (hlsRef.current) {
+          // hlsRef.current?.destroy()
+          hlsRef.current = null
+        }
+
+        const playlistUrl = `http://localhost:1234/api/v1/videos/${activeVersion.id}/playlist/${selectedResolution}`
+
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = playlistUrl
+        } else if (HLS.isSupported()) {
+          const hls = new HLS({ debug: false, enableWorker: true })
+          hls.loadSource(playlistUrl)
+          hls.attachMedia(video)
+
+          hls.on(HLS.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              if (data.type === HLS.ErrorTypes.NETWORK_ERROR) hls.startLoad()
+              if (data.type === HLS.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
+            }
+          })
+
+          hlsRef.current = hls
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    initHLS()
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy()
+        hlsRef.current = null
+      }
+    }
+  }, [activeVersion, selectedResolution])
+
+  const handlePlayPause = () => {
+    if (!videoRef.current) return
+    if (isPlaying) videoRef.current.pause()
+    else videoRef.current.play()
+    setIsPlaying(!isPlaying)
   }
 
-  const bestProcessed = useMemo(() => {
-    if (!data) return undefined
-    const processed = data.processedResolutions.sort((a, b) => a - b)
-    return processed[processed.length - 1]
-  }, [data])
+  const handleMute = () => {
+    if (!videoRef.current) return
+    videoRef.current.muted = !isMuted
+    setIsMuted(!isMuted)
+  }
+
+  const handleFullscreen = () => {
+    if (!containerRef.current) return
+    if (!isFullscreen) containerRef.current.requestFullscreen()
+    else document.exitFullscreen()
+    setIsFullscreen(!isFullscreen)
+  }
+
+  const formatTime = (sec: number) => {
+    if (!sec || isNaN(sec)) return "0:00"
+    const m = Math.floor(sec / 60)
+    const s = Math.floor(sec % 60).toString().padStart(2, "0")
+    return `${m}:${s}`
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[4fr_1fr] gap-4">
-      {/* video banner */}
+      {/* VIDEO PLAYER (replaced with merged version) */}
       <div
-        className="rounded-xl border border-border/80 bg-card/40 overflow-hidden relative aspect-video lg:aspect-[16/9]"
-        onMouseEnter={() => showUiForAWhile()}
-        onMouseMove={() => showUiForAWhile()}
-        onMouseLeave={() => {
-          if (isPlaying) setShowUi(false)
-        }}
+        ref={containerRef}
+        className="rounded-xl border border-border/80 bg-black overflow-hidden relative aspect-video lg:aspect-[16/8.5] group"
+        onMouseEnter={() => setShowControls(true)}
+        onMouseMove={() => setShowControls(true)}
+        onMouseLeave={() => setTimeout(() => setShowControls(false), 2000)}
       >
-        <div
-          className={`absolute inset-0 grid place-items-center transition-opacity duration-200 ${!isPlaying || showUi ? "opacity-100" : "opacity-0"
-            } pointer-events-none z-20`}
-        >
-          <button
-            onClick={() => {
-              if (!videoRef.current) return
-              if (videoRef.current.paused) {
-                videoRef.current.play()
-                setIsPlaying(true)
-                setShowUi(false)
-              } else {
-                videoRef.current.pause()
-                setIsPlaying(false)
-                setShowUi(true)
-              }
-            }}
-            className="pointer-events-auto group relative size-20 rounded-full bg-primary/15 border border-primary/20 backdrop-blur-sm hover:bg-primary/25 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            aria-label={isPlaying ? "Pause preview" : "Play preview"}
-          >
-            <div className="absolute inset-0 rounded-full blur-xl bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Play className="relative mx-auto text-primary w-8 h-8 translate-x-0.5" />
-          </button>
-        </div>
-
-        <div
-          className={`absolute right-3 top-3 flex items-center gap-2 transition-opacity duration-200 z-30 ${!isPlaying || showUi ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-            }`}
-        >
-          <ResolutionMenu info={data} disabled={isLoading} />
-        </div>
-
+        {/* Video */}
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
-          poster="/video-banner-preview-dark-silver-theme.jpg"
-          onPlay={() => {
-            setIsPlaying(true)
-            setShowUi(false)
-          }}
-          onPause={() => {
-            setIsPlaying(false)
-            setShowUi(true)
-          }}
-        >
-          {/* using a public demo video for preview purposes */}
-          <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+          controls={false}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
+          onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+        />
+
+        {/* Loading overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="animate-spin w-10 h-10 border-4 border-gray-700 border-t-white rounded-full"></div>
+          </div>
+        )}
+
+        {/* Click-to-play overlay */}
+        {!isPlaying && !loading && (
+          <div
+            className="absolute inset-0 bg-black/30 hover:bg-black/50 flex items-center justify-center cursor-pointer"
+            onClick={handlePlayPause}
+          >
+            <div className="w-20 h-20 rounded-full bg-white/80 hover:bg-white flex items-center justify-center">
+              <Play className="w-8 h-8 text-black ml-1" />
+            </div>
+          </div>
+        )}
+
+        {/* Controls */}
+        {(showControls || !isPlaying) && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-4">
+            {/* Progress */}
+            <input
+              type="range"
+              min="0"
+              max={duration}
+              value={currentTime}
+              onChange={e => {
+                if (videoRef.current) videoRef.current.currentTime = Number(e.target.value)
+              }}
+              className="w-full h-1.5 bg-gray-600 rounded-full appearance-none cursor-pointer accent-red-600"
+            />
+
+            {/* Time */}
+            <div className="flex justify-between text-xs text-gray-300 mt-1">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center justify-between mt-3">
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" className="text-white" onClick={handlePlayPause}>
+                  {isPlaying ? <Pause /> : <Play />}
+                </Button>
+                <Button size="sm" variant="ghost" className="text-white" onClick={handleMute}>
+                  {isMuted ? <VolumeX /> : <Volume2 />}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Speed */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
+                    >
+                      <span className="text-sm">{playbackSpeed}x</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 z-[60]">
+                    <DropdownMenuLabel>Speed</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {[0.5, 1, 1.25, 1.5, 2].map((opt) => (
+                      <DropdownMenuItem
+                        key={opt}
+                        onClick={() => setPlaybackSpeed(opt)}
+                        className={`justify-between ${opt === selectedResolution
+                          ? "bg-gray-200 text-black font-medium"
+                          : ""
+                          }`}
+                      >
+                        <span>{opt}x</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Resolution */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
+                    >
+                      <span className="text-sm">{selectedResolution}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 z-[60]">
+                    <DropdownMenuLabel>Quality</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {availableResolutions.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt}
+                        onClick={() => setSelectedResolution(opt)}
+                        className={`justify-between ${opt === selectedResolution
+                          ? "bg-gray-200 text-black font-medium"
+                          : ""
+                          }`}
+                      >
+                        <span>{opt}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Fullscreen */}
+                <Button size="sm" variant="ghost" className="text-white" onClick={handleFullscreen}>
+                  {isFullscreen ? <Minimize /> : <Maximize />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* versions rail */}
+      {/* Versions Panel (unchanged) */}
       <VersionsPanel
         versions={versions}
         activeVersion={activeVersion}
-        onChangeVersion={(id) => {
-          onChangeVersion(id)
-          setTimeout(() => mutate(), 50)
+        onChangeVersion={() => {
+          console.log("Version Changed !!")
         }}
       />
     </div>
-  )
-}
-
-function ResolutionMenu({ info, disabled }: { info?: VideoInfo; disabled?: boolean }) {
-  const fallbackAll = [144, 240, 360, 480, 720, 1080]
-  const fallbackProcessed = [144, 240, 360] // show some ready, others processing
-
-  const available = (info?.allResolutions?.length ? info.allResolutions : fallbackAll) ?? fallbackAll
-  const processed = new Set(
-    (info?.processedResolutions?.length ? info.processedResolutions : fallbackProcessed) ?? fallbackProcessed,
-  )
-
-  const maxRes = info?.maxResolution || Math.max(...available)
-  const maxLabel = `${maxRes}p • Preview`
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={disabled}
-          className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
-        >
-          <Settings className="w-4 h-4" />
-          <span className="text-sm">{maxLabel}</span>
-          <ChevronDown className="w-4 h-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 z-[60]">
-        <DropdownMenuLabel>Quality (preview only)</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {available.map((res) => {
-          const isReady = processed.has(res)
-          return (
-            <DropdownMenuItem key={res} className="justify-between">
-              <span>{res}p</span>
-              {isReady ? (
-                <span className="text-xs text-muted-foreground">Ready</span>
-              ) : (
-                <span className="text-xs text-primary animate-pulse">Processing…</span>
-              )}
-            </DropdownMenuItem>
-          )
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }

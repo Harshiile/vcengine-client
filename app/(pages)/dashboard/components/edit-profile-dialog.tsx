@@ -24,15 +24,13 @@ interface EditProfileDialogProps {
   initialData: {
     username: string
     email: string
-    description: string
-    website: string
-    location: string
-    profileImage: string
+    description?: string
+    website?: string
+    profileImage?: string
   }
-  onSave: (data: EditProfileDialogProps["initialData"]) => void
 }
 
-export function EditProfileDialog({ children, initialData, onSave }: EditProfileDialogProps) {
+export function EditProfileDialog({ children, initialData }: EditProfileDialogProps) {
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState(initialData)
   const [imagePreview, setImagePreview] = useState(initialData.profileImage)
@@ -48,12 +46,6 @@ export function EditProfileDialog({ children, initialData, onSave }: EditProfile
       }
       reader.readAsDataURL(file)
     }
-  }
-
-  const handleSave = () => {
-    console.log("[v0] Saving profile data:", formData)
-    onSave(formData)
-    setOpen(false)
   }
 
   const handleCancel = () => {
@@ -151,13 +143,13 @@ export function EditProfileDialog({ children, initialData, onSave }: EditProfile
               <Label htmlFor="location" className="text-foreground">
                 Location
               </Label>
-              <Input
+              {/* <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 className="bg-secondary/50 border-border focus:border-primary"
                 placeholder="City, Country"
-              />
+              /> */}
             </div>
           </div>
         </div>
@@ -167,7 +159,7 @@ export function EditProfileDialog({ children, initialData, onSave }: EditProfile
             Cancel
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => { }}
             className="bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
           >
             Save Changes

@@ -19,9 +19,9 @@ interface ProfileNavbarProps {
 export function ProfileNavbar({ activeTab, onTabChange, profileData, onEditProfile }: ProfileNavbarProps) {
   const router = useRouter()
   const tabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
+    // { id: "overview", label: "Overview", icon: BarChart3 },
     { id: "repositories", label: "Repositories", icon: FolderOpen },
-    { id: "stars", label: "Stars", icon: Star },
+    // { id: "stars", label: "Stars", icon: Star },
   ]
 
   return (
@@ -35,7 +35,7 @@ export function ProfileNavbar({ activeTab, onTabChange, profileData, onEditProfi
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{profileData.username}</h1>
+              <h1 className="text-2xl font-bold text-foreground">{profileData?.username?.charAt(0)?.toUpperCase()}{profileData?.username?.slice(1)}</h1>
               {onEditProfile && (
                 <Button
                   variant="outline"

@@ -22,9 +22,13 @@ export default function WorkspacePage() {
 
   return (
     <main className="min-h-screen">
-      <Suspense>
-        {workspace && <WorkspaceShell workspace={workspace!} />}
-      </Suspense>
+      {
+        workspace ?
+          <WorkspaceShell workspace={workspace} />
+          :
+          <p>No Workspace Found</p>
+      }
+
     </main>
   )
 }

@@ -18,7 +18,6 @@ export default function DashboardPage() {
     profileImage: "",
   })
 
-
   const { user, setUser } = useUser()
 
   useEffect(() => {
@@ -33,11 +32,6 @@ export default function DashboardPage() {
     }
     fetchUser()
   }, [user, setUser])
-
-  const handleProfileSave = (updatedProfile: typeof profile) => {
-    console.log("[v0] Profile updated:", updatedProfile)
-    setProfile(updatedProfile)
-  }
 
   // if (!user) {
   //   return (
@@ -60,7 +54,7 @@ export default function DashboardPage() {
       <div className="flex relative z-10">
         {/* Profile Sidebar - 30% width */}
         <div className="w-[30%] min-w-[320px] p-6 border-r border-border">
-          {/* <ProfileSidebar profileData={profile} onProfileSave={handleProfileSave} /> */}
+          <ProfileSidebar profileData={profile} />
         </div>
 
         {/* Main Content - 70% width */}
