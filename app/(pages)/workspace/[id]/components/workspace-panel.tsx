@@ -26,6 +26,9 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const hlsRef = useRef<HLS | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const resumeTimeRef = useRef(0)
+  const resumeWasPlayingRef = useRef(false)
+
 
   // Player UI states
   const [isPlaying, setIsPlaying] = useState(false)
@@ -64,7 +67,9 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
     const initHLS = async () => {
       setLoading(true)
       try {
-        // 🔥 Destroy previous HLS instance before creating new one
+
+        setLoading(true)
+
         if (hlsRef.current) {
           hlsRef.current.destroy()
           hlsRef.current = null
@@ -73,22 +78,25 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
         const playlistUrl = `http://localhost:1234/api/v1/videos/${activeVersion.id}/playlist/${selectedResolution}`
 
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          // Safari native support
           video.src = playlistUrl
+
+          // ⬅️ ADD THIS
+          video.onloadedmetadata = () => {
+            video.currentTime = resumeTimeRef.current
+            if (resumeWasPlayingRef.current) video.play()
+            setLoading(false)
+          }
         } else if (HLS.isSupported()) {
-          const hls = new HLS({
-            debug: false,
-            enableWorker: true,
-          })
+          const hls = new HLS({ debug: false, enableWorker: true })
 
           hls.loadSource(playlistUrl)
           hls.attachMedia(video)
 
-          hls.on(HLS.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              if (data.type === HLS.ErrorTypes.NETWORK_ERROR) hls.startLoad()
-              if (data.type === HLS.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
-            }
+          // ⬅️ ADD THIS
+          hls.on(HLS.Events.MANIFEST_PARSED, () => {
+            video.currentTime = resumeTimeRef.current
+            if (resumeWasPlayingRef.current) video.play()
+            setLoading(false)
           })
 
           hlsRef.current = hls
@@ -103,13 +111,13 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
     initHLS()
 
     return () => {
-      // Cleanup when component unmounts OR version/resolution changes
       if (hlsRef.current) {
         hlsRef.current.destroy()
         hlsRef.current = null
       }
     }
   }, [activeVersion, selectedResolution])
+
 
 
   const handlePlayPause = () => {
@@ -260,7 +268,14 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
                     {availableResolutions.map((opt) => (
                       <DropdownMenuItem
                         key={opt}
-                        onClick={() => setSelectedResolution(opt)}
+                        onClick={() => {
+                          if (videoRef.current) {
+                            resumeTimeRef.current = videoRef.current.currentTime
+                            resumeWasPlayingRef.current = !videoRef.current.paused
+                          }
+                          setLoading(true)
+                          setSelectedResolution(opt)
+                        }}
                         className={`justify-between ${opt === selectedResolution
                           ? "bg-gray-200 text-black font-medium"
                           : ""

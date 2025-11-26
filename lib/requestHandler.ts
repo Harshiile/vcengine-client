@@ -1,4 +1,5 @@
 import axios, { Method } from "axios"
+import Error from "next/error"
 import { toast } from "sonner"
 
 interface RequestHandlerOptions<T> {
@@ -22,10 +23,8 @@ export const requestHandler = async <T>({
             withCredentials: true
         },)
         return await action(result);
-    } catch (err) {
-        console.log(err);
-        // const message = err.response?.data?.message || "Something went wrong. Please try again."
-        const message = "xxxxxxxxxxxxxxx"
+    } catch (err: any) {
+        const message = err.response?.data?.message || "Something went wrong. Please try again."
         toast.error(message, {
             style: {
                 backgroundColor: "#2C0B0E",

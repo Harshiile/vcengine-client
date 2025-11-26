@@ -93,8 +93,11 @@ export default function VideoPlayerDrawer({
                 {originalThumbnail ? (
                   <>
                     <Image
+                      unoptimized
                       src={originalThumbnail || "/placeholder.svg"}
                       alt="Original"
+                      width={100}
+                      height={100}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -129,8 +132,11 @@ export default function VideoPlayerDrawer({
                     {editedThumbnail ? (
                       <>
                         <Image
+                          unoptimized
                           src={editedThumbnail || "/placeholder.svg"}
                           alt="Edited"
+                          width={100}
+                          height={100}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">

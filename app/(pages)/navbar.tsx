@@ -17,6 +17,7 @@ import { User, useUser } from "@/context/user-context"
 import { applyToast } from "@/lib/toast"
 import logo from '@/public/logo.svg'
 import Image from "next/image"
+import { avatarUrl } from "@/lib/avatar"
 
 export function MainNavbar() {
     const router = useRouter()
@@ -35,7 +36,11 @@ export function MainNavbar() {
             <div className="flex items-center justify-between px-6 py-3">
 
                 {/* Logo */}
-                <Image src={logo} alt="V'DURA" />
+                <Image
+                    unoptimized
+                    src={logo}
+                    alt="V'DURA"
+                />
 
                 {/* Profile Section */}
                 <div className="flex items-center space-x-4">
@@ -53,7 +58,7 @@ export function MainNavbar() {
                                 className="relative h-10 w-10 rounded-full hover:ring-2 hover:ring-primary/20 transition-all duration-300"
                             >
                                 <Avatar className="h-10 w-10">
-                                    <AvatarImage src={`http://localhost:1234/api/v1/storage/images/avatar/${user?.avatar}`} alt="Profile" />
+                                    <AvatarImage src={avatarUrl(user?.avatarUrl)} alt="Profile" />
                                     <AvatarFallback>{user?.username.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                             </Button>
@@ -61,7 +66,7 @@ export function MainNavbar() {
                         <DropdownMenuContent className="w-64 animate-scale-in" align="end">
                             <div className="flex items-center space-x-3 p-3 border-b border-border">
                                 <Avatar className="h-12 w-12" onClick={() => router.push('/dashboard')}>
-                                    <AvatarImage src={`http://localhost:1234/api/v1/storage/images/avatar/${user?.avatar}`} alt="Profile" />
+                                    <AvatarImage src={user?.avatarUrl} alt="Profile" />
                                     <AvatarFallback>{user?.username.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div>

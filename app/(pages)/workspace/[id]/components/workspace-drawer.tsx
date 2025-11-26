@@ -107,6 +107,9 @@ export function WorkspaceDrawer({
                                             <div className="relative w-full aspect-video bg-card/60">
                                                 {workspace.banner ? (
                                                     <Image
+                                                        unoptimized
+                                                        width={100}
+                                                        height={100}
                                                         src={`http://localhost:1234/api/v1/storage/images/banner/${workspace.banner}`}
                                                         alt={workspace.name}
                                                         className="w-full h-full object-cover"

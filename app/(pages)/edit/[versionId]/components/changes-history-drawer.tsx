@@ -141,8 +141,11 @@ export default function ChangesHistoryDrawer({
                       >
                         <div className="relative aspect-video bg-secondary/30 overflow-hidden">
                           <Image
+                            unoptimized
                             src={videoThumbnails[change.id] || "/placeholder.svg"}
                             alt="Video"
+                            width={100}
+                            height={100}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

@@ -15,7 +15,13 @@ export default function HomePage() {
             {/* Hero Section */}
             <section className="w-full px-6 pt-28 pb-16 text-center flex flex-col items-center">
                 <div className="flex items-end">
-                    <Image src="/logo.svg" alt="Logo" className="w-40 h-40 drop-shadow-xl" />
+                    <Image unoptimized
+                        width={100}
+                        height={100}
+                        src="/logo.svg"
+                        alt="Logo"
+                        className="w-40 h-40 drop-shadow-xl"
+                    />
                     <motion.h1
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -24,7 +30,13 @@ export default function HomePage() {
                     >
                         Powerful Cloud Video Editing Platform
                     </motion.h1>
-                    <Image src="/logo.svg" alt="Logo" className="w-40 h-40 drop-shadow-xl" />
+                    <Image unoptimized
+                        width={100}
+                        height={100}
+                        src="/logo.svg"
+                        alt="Logo"
+                        className="w-40 h-40 drop-shadow-xl"
+                    />
                 </div>
 
                 <motion.p

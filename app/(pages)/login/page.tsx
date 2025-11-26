@@ -87,7 +87,7 @@ export default function Login() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <Image src={logo} alt="V'DURA" />
+          <Image src={logo} alt="V'DURA" width={100} height={100} />
         </div>
 
         <div className="flex items-center gap-4">

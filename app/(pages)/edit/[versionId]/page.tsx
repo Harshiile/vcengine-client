@@ -52,6 +52,8 @@ export default function VideoEditor() {
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [showUploadDialog, setShowUploadDialog] = useState<boolean>(false)
   const [showUploadDialogTitle, setShowUploadDialogTitle] = useState("")
+  const [showCommitDialog, setShowCommitDialog] = useState(false)
+  const [commitMessage, setCommitMessage] = useState("")
 
   const [selectedVideo, setSelectedVideo] = useState<"original" | "edited">("original")
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false)
@@ -432,6 +434,12 @@ export default function VideoEditor() {
   const displayUrl = selectedVideo === "original" ? originalUrl : currentUrl
 
   const handleSubmitFinal = async () => {
+    setShowCommitDialog(true)
+
+    if (!commitMessage.trim()) {
+      applyToast("Error", "Commit message is required.")
+      return
+    }
 
     // 1. Upload all clips
     for (const c of changes) {
@@ -444,7 +452,7 @@ export default function VideoEditor() {
             type: "clip",
             contentType: c.videoBFile?.type
           },
-          action: async ({ uploadUrl }: { uploadUrl: string }) => {
+          action: async ({ uploadUrl, fileKey }: { uploadUrl: string, fileKey: string }) => {
             setUploadProgress(0) // ensure it reaches 100%
             setShowUploadDialog(true)
             setShowUploadDialogTitle(`Uploading Clip #${c.clipIndex}`);
@@ -460,15 +468,37 @@ export default function VideoEditor() {
             }).catch(() => {
               throw new Error()
             })
+
             setUploadProgress(100) // ensure it reaches 100%
             setShowUploadDialog(false)
+            c.newSection = fileKey
           }
         })
       }
     }
 
-    applyToast("Success", "Video is sent for processing")
-    router.push("/dashboard")
+    const changesRecords = changes.map(c => {
+      return {
+        type: c.type.toUpperCase(),
+        startTimestamp: c.startTimestamp,
+        endTimestamp: c.endTimestamp,
+        newSection: c.newSection
+      }
+    })
+
+    await requestHandler({
+      url: '/workspaces/versions/new',
+      method: "POST",
+      body: {
+        oldVersion: versionId,
+        commitMessage,
+        changes: changesRecords
+      },
+      action: ({ message }: { message: string }) => {
+        applyToast("Success", message)
+        // router.push("/dashboard")
+      }
+    })
   }
 
   return <>
@@ -569,7 +599,7 @@ export default function VideoEditor() {
                 </Button>
 
                 <Button
-                  onClick={handleSubmitFinal}
+                  onClick={() => { setShowCommitDialog(true) }}
                   className="flex-1 h-14 rounded-xl bg-white border border-white/10 transition hover:cursor-pointer"
                 >
                   Submit
@@ -632,6 +662,45 @@ export default function VideoEditor() {
               loading={loading}
             />
           )}
+
+
+          <Dialog open={showCommitDialog} onOpenChange={setShowCommitDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Commit Changes</DialogTitle>
+                <DialogDescription>
+                  Enter a commit message describing the changes made in this version.
+                </DialogDescription>
+              </DialogHeader>
+
+              <input
+                className="w-full mt-3 px-3 py-2 bg-black/20 border border-white/20 rounded-xl text-white outline-none"
+                placeholder="Commit message..."
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+              />
+
+              <div className="flex justify-end gap-3 mt-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setCommitMessage("")
+                    setShowCommitDialog(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  className="bg-white text-black"
+                  onClick={handleSubmitFinal}
+                >
+                  Submit
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
         </div>
       </>
     </div>

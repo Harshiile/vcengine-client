@@ -108,8 +108,11 @@ export default function EditDialog({
                         >
                           <div className="relative aspect-video bg-secondary/30 overflow-hidden">
                             <Image
+                              unoptimized
                               src={videoThumbnail || "/placeholder.svg"}
                               alt="Preview"
+                              width={100}
+                              height={100}
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

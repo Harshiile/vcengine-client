@@ -133,8 +133,8 @@ export default function Signup() {
   const uploadAvatar = async (): Promise<string> => {
     return new Promise(async (resolve, reject) => {
 
-      requestHandler({
-        url: "/storage/signed-url",
+      await requestHandler({
+        url: "/auth/signup/avatar",
         method: "POST",
         body: {
           contentType: formData.selectedFile?.type,
@@ -170,7 +170,7 @@ export default function Signup() {
 
       <header className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <Image src={logo} alt="V'DURA" />
+          <Image unoptimized src={logo} alt="V'DURA" width={100} height={100} />
         </div>
 
         <div className="flex items-center gap-4">
@@ -275,8 +275,11 @@ export default function Signup() {
 
                   {avatarPreview ? (
                     <Image
+                      unoptimized
                       src={avatarPreview || "/placeholder.svg"}
                       alt="Selected profile"
+                      width={100}
+                      height={100}
                       className="w-full h-full object-cover"
                     />
                   ) : (
