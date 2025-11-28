@@ -92,7 +92,7 @@ export function WorkspaceDrawer({
                                 return (
                                     <Link
                                         key={workspace.id}
-                                        href={`/player/${workspace.id}`}
+                                        href={`/workspace/${workspace.id}`}
                                         onClick={onClose}
                                         className="block group"
                                     >
@@ -110,7 +110,7 @@ export function WorkspaceDrawer({
                                                         unoptimized
                                                         width={100}
                                                         height={100}
-                                                        src={`http://localhost:1234/api/v1/storage/images/banner/${workspace.banner}`}
+                                                        src={workspace.banner ? `http://localhost:1234/api/v1/storage/images/banner/${workspace.banner}` : '/no_banner.jpg'}
                                                         alt={workspace.name}
                                                         className="w-full h-full object-cover"
                                                     />

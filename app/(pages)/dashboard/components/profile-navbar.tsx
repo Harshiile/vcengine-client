@@ -46,7 +46,7 @@ export function ProfileNavbar({ activeTab, onTabChange, profileData, onEditProfi
                 </Button>
               )}
             </div>
-            {profileData.bio && <p className="text-sm text-muted-foreground mt-1">{profileData.bio}</p>}
+            <p className="text-md font-bold text-foreground/80">@{profileData?.username}</p>
           </div>
         </div>
 

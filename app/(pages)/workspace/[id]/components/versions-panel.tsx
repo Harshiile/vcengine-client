@@ -33,7 +33,7 @@ export default function VersionsPanel({
                   : "bg-card/60 border-border hover:border-primary/50 hover:bg-card/80",
               )}
             >
-              <span className="truncate">v{idx} - {v.commitMessage}</span>
+              <span className="truncate">v{versions.length - idx - 1} - {v.commitMessage}</span>
             </Button>
           ))}
         </div>

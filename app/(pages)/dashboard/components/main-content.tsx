@@ -123,7 +123,7 @@ export function MainContent({ activeTab }: MainContentProps) {
                       <div className="w-40 h-24 rounded-lg overflow-hidden bg-secondary/50 group-hover:ring-2 ring-primary/50 transition-all duration-300">
                         <Image
                           unoptimized
-                          src={`http://localhost:1234/api/v1/storage/images/banner/${ws.banner}`}
+                          src={ws.banner ? `http://localhost:1234/api/v1/storage/images/banner/${ws.banner}` : '/no_banner.jpg'}
                           alt={`${ws.name} banner`}
                           width={100}
                           height={100}

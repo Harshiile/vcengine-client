@@ -1,49 +1,44 @@
 "use client"
 
-import { LinkIcon, Calendar } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { LinkIcon, Calendar, Edit2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { EditProfileDialog } from "./edit-profile-dialog"
 import { ProfileData } from "../page"
-import { avatarUrl } from "@/lib/avatar"
-import Link from "next/link"
-
 
 export function ProfileSidebar({ profileData }: { profileData: ProfileData }) {
 
   return (
     <div className="w-full space-y-6 animate-float-up">
-      {/* Profile Card */}
-      <Card className="hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover-lift bg-card border-border">
-        <CardContent className="p-6">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <Avatar className="h-24 w-24 ring-4 ring-primary/20 hover:ring-primary/40 transition-all duration-300">
-              <AvatarImage src={avatarUrl(profileData?.avatarUrl!)} alt="Profile" />
-              <AvatarFallback className="text-2xl bg-secondary text-secondary-foreground">
-                {profileData?.username?.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-
-            <h2 className="text-xl font-bold text-foreground">@{profileData?.username}</h2>
-
-            <EditProfileDialog initialData={profileData}>
-              <Button
-                variant="outline"
-                className="w-full hover:bg-primary transition-all duration-300 bg-card border-primary/50 text-primary hover:border-primary hover-lift hover:cursor-pointer"
-              >
-                <span className="mr-2">✏️</span>
-                Edit Profile
-              </Button>
-            </EditProfileDialog>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Description */}
       <Card className="hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover-lift bg-card border-border">
         <CardHeader>
-          <CardTitle className="text-lg text-foreground">About</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg text-foreground">About</CardTitle>
+
+            {/* Edit Icon */}
+            <EditProfileDialog initialData={profileData}>
+              <button
+                className="
+            p-2 rounded-md border border-primary/40 
+            hover:bg-primary/10 hover:border-primary 
+            transition-all duration-200 
+            group
+          "
+              >
+                <Edit2 className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                {/* Tooltip */}
+                <span
+                  className="
+              absolute mt-8 py-1 px-2 text-xs rounded 
+              bg-primary text-primary-foreground 
+              opacity-0 group-hover:opacity-100 
+              transition-opacity"
+                >
+                  Edit Profile
+                </span>
+              </button>
+            </EditProfileDialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {

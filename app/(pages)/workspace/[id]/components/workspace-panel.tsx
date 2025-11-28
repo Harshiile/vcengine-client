@@ -34,7 +34,6 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [availableResolutions, setAvailableResolutions] = useState<number[]>([])
   const [selectedResolution, setSelectedResolution] = useState(360)
 
@@ -220,36 +219,6 @@ export default function WorkspacePanel({ activeVersion, setActiveVersion, versio
               </div>
 
               <div className="flex items-center gap-3">
-                {/* Speed */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-2 border-border/80 bg-card/60 hover:bg-card/80 hover:border-primary/50"
-                    >
-                      <span className="text-sm">{playbackSpeed}x</span>
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 z-[60]">
-                    <DropdownMenuLabel>Speed</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {[0.5, 1, 1.25, 1.5, 2].map((opt) => (
-                      <DropdownMenuItem
-                        key={opt}
-                        onClick={() => setPlaybackSpeed(opt)}
-                        className={`justify-between ${opt === selectedResolution
-                          ? "bg-gray-200 text-black font-medium"
-                          : ""
-                          }`}
-                      >
-                        <span>{opt}x</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
                 {/* Resolution */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

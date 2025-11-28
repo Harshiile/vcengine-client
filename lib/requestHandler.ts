@@ -1,4 +1,4 @@
-import axios, { Method } from "axios"
+import axios, { AxiosError, Method } from "axios"
 import Error from "next/error"
 import { toast } from "sonner"
 
@@ -23,7 +23,8 @@ export const requestHandler = async <T>({
             withCredentials: true
         },)
         return await action(result);
-    } catch (err: any) {
+    } catch (error) {
+        const err = error as AxiosError<{ message?: string }>
         const message = err.response?.data?.message || "Something went wrong. Please try again."
         toast.error(message, {
             style: {

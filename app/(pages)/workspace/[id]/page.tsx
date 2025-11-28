@@ -11,6 +11,10 @@ export default function WorkspacePage() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
 
   useEffect(() => {
+    console.log({
+      id
+    });
+
     requestHandler({
       url: `/workspaces/${id}`,
       method: "GET",

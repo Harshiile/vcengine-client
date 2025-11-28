@@ -18,7 +18,7 @@ export default function HomePage() {
                     <Image unoptimized
                         width={100}
                         height={100}
-                        src="/logo.svg"
+                        src="/tree_logo.png"
                         alt="Logo"
                         className="w-40 h-40 drop-shadow-xl"
                     />
@@ -33,7 +33,7 @@ export default function HomePage() {
                     <Image unoptimized
                         width={100}
                         height={100}
-                        src="/logo.svg"
+                        src="/tree_logo.png"
                         alt="Logo"
                         className="w-40 h-40 drop-shadow-xl"
                     />

@@ -496,7 +496,7 @@ export default function VideoEditor() {
       },
       action: ({ message }: { message: string }) => {
         applyToast("Success", message)
-        // router.push("/dashboard")
+        router.push("/dashboard")
       }
     })
   }

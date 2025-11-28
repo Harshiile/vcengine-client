@@ -35,9 +35,6 @@ export default function VideoUploadPage() {
 
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null)
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null)
-  const [thumbLoaded, setThumbLoaded] = useState(false)
-
-  const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [showUploadDialogTitle, setShowUploadDialogTitle] = useState("Upload Video")
@@ -71,7 +68,6 @@ export default function VideoUploadPage() {
       return
     }
     handleInput("thumbnailFile", file)
-    setThumbLoaded(false)
     setThumbnailPreviewUrl(URL.createObjectURL(file))
   }
 
@@ -85,7 +81,6 @@ export default function VideoUploadPage() {
 
   const uploadProcess = async () => {
     if (!form.videoFile) return
-    setIsUploading(true)
     setUploadProgress(0)
     setShowUploadDialog(true)
 
@@ -159,8 +154,6 @@ export default function VideoUploadPage() {
           })
         },
       })
-
-      setIsUploading(false)
     } catch (error) {
       console.log(error)
       applyToast("Error", "Uploading Failed !!")
@@ -307,7 +300,6 @@ export default function VideoUploadPage() {
                             width={1000}
                             height={600}
                             className="object-cover w-full h-auto"
-                            onLoad={() => setThumbLoaded(true)}
                             alt="Thumbnail"
                           />
                         </div>

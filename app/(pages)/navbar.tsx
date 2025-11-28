@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import { LogOut, Star, FolderOpen } from "lucide-react"
+import { LogOut, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -15,7 +15,7 @@ import { requestHandler } from "@/lib/requestHandler"
 import { useRouter } from "next/navigation"
 import { User, useUser } from "@/context/user-context"
 import { applyToast } from "@/lib/toast"
-import logo from '@/public/logo.svg'
+import logo from '@/public/tree_logo.png'
 import Image from "next/image"
 import { avatarUrl } from "@/lib/avatar"
 
@@ -40,6 +40,7 @@ export function MainNavbar() {
                     unoptimized
                     src={logo}
                     alt="V'DURA"
+                    width={50}
                 />
 
                 {/* Profile Section */}
@@ -66,21 +67,17 @@ export function MainNavbar() {
                         <DropdownMenuContent className="w-64 animate-scale-in" align="end">
                             <div className="flex items-center space-x-3 p-3 border-b border-border">
                                 <Avatar className="h-12 w-12" onClick={() => router.push('/dashboard')}>
-                                    <AvatarImage src={user?.avatarUrl} alt="Profile" />
+                                    <AvatarImage src={avatarUrl(user?.avatarUrl)} alt="Profile" />
                                     <AvatarFallback>{user?.username.charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium">{user?.username?.charAt(0)?.toUpperCase()}{user?.username?.slice(1)}</p>
+                                    <p className="font-medium">@{user?.username}</p>
                                     <p className="text-sm text-muted-foreground">{user?.email}</p>
                                 </div>
                             </div>
                             <DropdownMenuItem onClick={() => { router.push("/dashboard") }} className="hover:bg-accent transition-colors">
                                 <FolderOpen className="mr-2 h-4 w-4" />
                                 Repositories
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-accent transition-colors">
-                                <Star className="mr-2 h-4 w-4" />
-                                Stars
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="hover:bg-destructive/10 text-destructive transition-colors" onClick={() => {
