@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 export const metadata: Metadata = {
   title: "VcEngine",
   icons: {
-    icon: "/logo.svg",
+    icon: "/tree_logo.png",
   },
 }
 

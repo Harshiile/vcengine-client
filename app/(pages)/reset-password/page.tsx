@@ -55,7 +55,6 @@ export default function ResetPasswordPage() {
     <main className="min-h-screen grid place-items-center px-4">
       <Card className="w-full max-w-md bg-card/80 border-border/60 backdrop-blur shadow-2xl">
         <CardContent className="pt-8 pb-8 px-6">
-          {/* Logo + Name */}
           <div className="flex flex-col items-center gap-3">
             <div className="size-16 rounded-xl bg-primary/10 border border-border/60 grid place-items-center">
               <Sparkles className="w-7 h-7 text-primary" aria-hidden />

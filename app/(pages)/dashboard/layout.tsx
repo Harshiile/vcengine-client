@@ -6,7 +6,7 @@ import "@/app/globals.css"
 export const metadata: Metadata = {
   title: "Dashboard | VcEngine",
   icons: {
-    icon: "/logo.svg",
+    icon: "/tree_logo.png",
   },
 }
 
@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans  antialiased`}>
+      <body className={`font-sans antialiased`}>
         <Suspense fallback={null}>
           {children}
         </Suspense>

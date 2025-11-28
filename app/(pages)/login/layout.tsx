@@ -6,7 +6,7 @@ import "@/app/globals.css"
 export const metadata: Metadata = {
   title: "Login | VcEngine",
   icons: {
-    icon: "/logo.svg",
+    icon: "/tree_logo.png",
   },
 }
 

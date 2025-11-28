@@ -80,7 +80,8 @@ export default function Signup() {
       requestHandler({
         url: `/auth/username/uniqueness/${formData.username}`,
         method: 'GET',
-        action: async ({ isUsernameExist }: { isUsernameExist: boolean }) => {
+        action: async (isUsernameExist: boolean) => {
+
           // Username Exists
           if (isUsernameExist) {
             applyToast('Error', "Username already exists")
@@ -97,7 +98,6 @@ export default function Signup() {
             console.log(avatarKey);
             setShowUploadDialog(false)
           }
-
 
           requestHandler({
             url: "/auth/signup",

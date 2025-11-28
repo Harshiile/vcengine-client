@@ -1,5 +1,4 @@
 import axios, { AxiosError, Method } from "axios"
-import Error from "next/error"
 import { toast } from "sonner"
 
 interface RequestHandlerOptions<T> {

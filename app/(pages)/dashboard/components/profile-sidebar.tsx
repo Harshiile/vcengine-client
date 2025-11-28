@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { EditProfileDialog } from "./edit-profile-dialog"
 import { ProfileData } from "../page"
 
+const formattedJoinDate = (date: string) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
 export function ProfileSidebar({ profileData }: { profileData: ProfileData }) {
 
   return (
@@ -55,7 +62,7 @@ export function ProfileSidebar({ profileData }: { profileData: ProfileData }) {
             }
             <div className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors">
               <Calendar className="w-4 h-4" />
-              <span>Joined {profileData.createdAt}</span>
+              <span>Joined {formattedJoinDate(profileData.createdAt)}</span>
             </div>
           </div>
         </CardContent>

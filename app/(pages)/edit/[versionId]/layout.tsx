@@ -6,7 +6,7 @@ import { Suspense } from "react"
 export const metadata: Metadata = {
   title: "Edit | VcEngine",
   icons: {
-    icon: "/logo.svg",
+    icon: "/tree_logo.png",
   },
 }
 

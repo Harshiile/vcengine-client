@@ -6,7 +6,7 @@ import "@/app/globals.css"
 export const metadata: Metadata = {
   title: "Signup | VcEngine",
   icons: {
-    icon: "/logo.svg",
+    icon: "/tree_logo.png",
   },
 }
 
@@ -16,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans `}>
+    <html lang="en" className="dark">
+      <body className="font-sans antialiased">
         <Suspense fallback={null}>
           {children}
         </Suspense>

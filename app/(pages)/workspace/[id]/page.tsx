@@ -15,10 +15,13 @@ export default function WorkspacePage() {
   useEffect(() => {
     setLoading(true)
 
+    console.log({ workspaceId: id });
+
     requestHandler({
       url: `/workspaces/${id}`,
       method: "GET",
       action: ({ workspace }: { workspace: Workspace }) => {
+        console.log({ workspace });
         setWorkspace(workspace)
         setLoading(false)
       }
